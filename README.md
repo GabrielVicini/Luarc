@@ -1,4 +1,4 @@
-[![Luarc Banner](https://github.com/GabrielVicini/Luarc/blob/main/assets/LuarcBanner.png?raw=true)](https://github.com/GabrielVicini/Luarc)
+[![Luarc Banner](https://github.com/GabrielVicini/Luarc/blob/master/assets/LuarcBanner.png?raw=true)](https://github.com/GabrielVicini/Luarc)
 
 <div align="center">
 
