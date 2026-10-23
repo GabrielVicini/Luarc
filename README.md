@@ -15,4 +15,4 @@ Luarc brings together the flexibility of Luau, the performance of native compila
 </div>
 
 > [!WARNING]  
-> Luarc is currently in pre-alpha development and is not suitable for production use. It may contain critical bugs, incomplete features, and unexpected behavior. Language syntax, semantics, and APIs may change as development progresses, potentially without backward compatibility. Don't be the person who tries to run their nuclear reactor control system off this and get angry when a metatable fails; it's an experimental compiler.
+> Luarc is currently in pre-alpha development and is not suitable for production use. It may contain critical bugs, incomplete features, and unexpected behavior. Language syntax, semantics, and APIs may change as development progresses, potentially without backward compatibility.
