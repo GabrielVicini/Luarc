@@ -14,3 +14,5 @@ Luarc brings together the flexibility of Luau, the performance of native compila
 
 </div>
 
+> [!WARNING]  
+> Luarc is currently in pre-alpha development and is not suitable for production use. Critical bugs, incomplete features, and unexpected behavior may be present. Language syntax, semantics, and APIs are subject to change as development progresses, potentially without backward compatibility.
