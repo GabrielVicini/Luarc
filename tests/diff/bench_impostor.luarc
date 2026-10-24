@@ -1,0 +1,485 @@
+-- Luau Impostor Detector: single-file semantic conformance stress test
+-- Intended for a current, full-featured standalone Luau runtime.
+-- No Roblox services, filesystem, or third-party libraries required.
+-- A compile-time rejection is itself a useful compatibility result.
+--!nocheck
+
+type Pair<T, U> = { left: T, right: U }
+type Payload = number | string
+
+local function identity<T>(value: T): T
+    return value
+end
+
+local passed = 0
+local failed = 0
+local failures = {}
+
+local function equal(actual, expected, label)
+    if actual ~= expected then
+        error(string.format("%s: expected %s, got %s", label or "comparison", tostring(expected), tostring(actual)), 2)
+    end
+end
+
+local function check(condition, label)
+    if not condition then
+        error(label or "assertion failed", 2)
+    end
+end
+
+local function probe(name, fn)
+    local ok, err = pcall(fn)
+    if ok then
+        passed += 1
+        print("[PASS] " .. name)
+    else
+        failed += 1
+        table.insert(failures, name .. " -> " .. tostring(err))
+        print("[FAIL] " .. name .. " -> " .. tostring(err))
+    end
+end
+
+probe("01 Luau generic function, union type, cast", function()
+    local pair: Pair<number, string> = { left = 11, right = "signal" }
+    local payload: Payload = pair.right
+    local cast = payload :: string
+    equal(identity(pair.left * 3), 33)
+    equal(identity(cast), "signal")
+end)
+
+probe("02 compound operators + continue + if-expression", function()
+    local sum = 0
+    local label = "start"
+    for i = 1, 12 do
+        if i % 3 == 0 then
+            continue
+        end
+        sum += if i % 2 == 0 then i * 2 else i
+    end
+    label ..= ":" .. tostring(sum)
+    equal(label, "start:72")
+end)
+
+probe("03 elseif expression and scope shadowing", function()
+    local x = 7
+    local function classify(n: number): string
+        return if n < 0 then "negative" elseif n == 0 then "zero" else "positive"
+    end
+    do
+        local x = -1
+        equal(classify(x), "negative")
+    end
+    equal(x, 7)
+    equal(classify(0), "zero")
+    equal(classify(x), "positive")
+end)
+
+probe("04 expression-valued and/or, false vs nil", function()
+    local count = 0
+    local function bump()
+        count += 1
+        return "CALLED"
+    end
+    equal(false and bump(), false)
+    equal(true or bump(), true)
+    equal(0 or bump(), 0)
+    equal("" and "yes", "yes")
+    equal(nil or "fallback", "fallback")
+    equal(not 0, false)
+    equal(count, 0)
+end)
+
+probe("05 multiple returns and preserved nil slots", function()
+    local function tri()
+        return "A", nil, "C"
+    end
+    local a = table.pack(tri())
+    equal(a.n, 3)
+    equal(a[1], "A")
+    equal(a[2], nil)
+    equal(a[3], "C")
+    local b = table.pack(99, tri())
+    equal(b.n, 4)
+    equal(b[2], "A")
+    equal(b[3], nil)
+    equal(b[4], "C")
+    local c = table.pack(tri(), 99)
+    equal(c.n, 2)
+    equal(c[1], "A")
+    equal(c[2], 99)
+    local d = table.pack((tri()))
+    equal(d.n, 1)
+end)
+
+probe("06 varargs, select, and return forwarding", function()
+    local function relay(...)
+        return "prefix", ...
+    end
+    local p = table.pack(relay(4, nil, 6))
+    equal(p.n, 4)
+    equal(p[1], "prefix")
+    equal(p[2], 4)
+    equal(p[3], nil)
+    equal(p[4], 6)
+    equal(select("#", 4, nil, 6), 3)
+    local q = table.pack(select(2, "x", nil, "z"))
+    equal(q.n, 2)
+    equal(q[1], nil)
+    equal(q[2], "z")
+end)
+
+probe("07 table constructor tail expansion", function()
+    local function tri()
+        return 8, nil, 10
+    end
+    local a = { "first", tri() }
+    equal(a[1], "first")
+    equal(a[2], 8)
+    equal(a[3], nil)
+    equal(a[4], 10)
+    local b = { tri(), "last" }
+    equal(b[1], 8)
+    equal(b[2], "last")
+    equal(b[3], nil)
+end)
+
+probe("08 closures capture changing upvalues", function()
+    local value = 10
+    local f = function()
+        return value
+    end
+    value = 29
+    equal(f(), 29)
+    value += 4
+    equal(f(), 33)
+end)
+
+probe("09 distinct loop-local closure captures", function()
+    local callbacks = {}
+    for i = 1, 5 do
+        local squared = i * i
+        callbacks[i] = function()
+            return i, squared
+        end
+    end
+    for j = 1, 5 do
+        local i, square = callbacks[j]()
+        equal(i, j)
+        equal(square, j * j)
+    end
+end)
+
+probe("10 metatable __index table delegation + method call", function()
+    local proto = { greeting = "hello" }
+    function proto:compute(delta)
+        return self.base + delta
+    end
+    local obj = setmetatable({ base = 17 }, { __index = proto })
+    equal(obj.greeting, "hello")
+    equal(obj:compute(5), 22)
+    equal(rawget(obj, "greeting"), nil)
+end)
+
+probe("11 metatable __newindex vs rawset", function()
+    local sink = {}
+    local obj = setmetatable({ existing = 1 }, {
+        __newindex = function(_, key, value)
+            sink[key] = value * 3
+        end,
+    })
+    obj.existing = 2
+    obj.absent = 7
+    equal(obj.existing, 2)
+    equal(rawget(obj, "absent"), nil)
+    equal(sink.absent, 21)
+    rawset(obj, "absent", 9)
+    obj.absent = 12
+    equal(obj.absent, 12)
+    equal(sink.absent, 21)
+end)
+
+probe("12 binary metamethods, including right operand", function()
+    local mt = {}
+    mt.__add = function(a, b)
+        local av = if type(a) == "table" then a.value else a
+        local bv = if type(b) == "table" then b.value else b
+        return av + bv
+    end
+    local obj = setmetatable({ value = 13 }, mt)
+    equal(obj + 5, 18)
+    equal(5 + obj, 18)
+    equal(obj + obj, 26)
+end)
+
+probe("13 __eq, __lt and __le metamethods", function()
+    local mt = {
+        __eq = function(a, b) return a.value == b.value end,
+        __lt = function(a, b) return a.value < b.value end,
+        __le = function(a, b) return a.value <= b.value end,
+    }
+    local a = setmetatable({ value = 4 }, mt)
+    local b = setmetatable({ value = 4 }, mt)
+    local c = setmetatable({ value = 9 }, mt)
+    check(a == b, "equal-value objects should compare equal")
+    check(a ~= c, "different-value objects should compare unequal")
+    check(a < c, "__lt failed")
+    check(a <= b, "__le failed")
+    check(c > a, "reversed __lt failed")
+end)
+
+probe("14 __call, __concat and __tostring", function()
+    local callable = setmetatable({ factor = 7 }, {
+        __call = function(self, x, y) return self.factor * x + y end,
+    })
+    equal(callable(6, 1), 43)
+    local obj = setmetatable({ value = "core" }, {
+        __concat = function(a, b)
+            local av = if type(a) == "table" then a.value else a
+            local bv = if type(b) == "table" then b.value else b
+            return av .. "/" .. bv
+        end,
+        __tostring = function(self) return "<" .. self.value .. ">" end,
+    })
+    equal(obj .. "x", "core/x")
+    equal("x" .. obj, "x/core")
+    equal(tostring(obj), "<core>")
+end)
+
+probe("15 __len and protected metatables", function()
+    local obj = setmetatable({}, {
+        __len = function() return 137 end,
+        __metatable = "locked",
+    })
+    equal(#obj, 137)
+    equal(getmetatable(obj), "locked")
+    local ok = pcall(function()
+        setmetatable(obj, {})
+    end)
+    equal(ok, false)
+end)
+
+probe("16 Luau generalized iteration over a table", function()
+    local total = 0
+    local weighted = 0
+    for index, value in { 3, 5, 8 } do
+        total += value
+        weighted += index * value
+    end
+    equal(total, 16)
+    equal(weighted, 37)
+end)
+
+probe("17 Luau __iter metamethod", function()
+    local iterable = setmetatable({}, {
+        __iter = function()
+            local index = 0
+            return function()
+                index += 1
+                if index <= 4 then
+                    return index, index * index
+                end
+            end
+        end,
+    })
+    local indices = 0
+    local squares = 0
+    for index, square in iterable do
+        indices += index
+        squares += square
+    end
+    equal(indices, 10)
+    equal(squares, 30)
+end)
+
+probe("18 nested pcall with multiple return values", function()
+    local function operation()
+        return 8, nil, 10
+    end
+    local result = table.pack(pcall(operation))
+    equal(result.n, 4)
+    equal(result[1], true)
+    equal(result[2], 8)
+    equal(result[3], nil)
+    equal(result[4], 10)
+    local ok, err = pcall(function()
+        error("sentinel-failure", 0)
+    end)
+    equal(ok, false)
+    check(string.find(tostring(err), "sentinel-failure", 1, true) ~= nil)
+end)
+
+probe("19 xpcall error-handler transformation", function()
+    local ok, result = xpcall(function()
+        error("bad-packet", 0)
+    end, function(err)
+        return "handled:" .. tostring(err)
+    end)
+    equal(ok, false)
+    check(string.find(result, "handled:", 1, true) == 1)
+    check(string.find(result, "bad-packet", 1, true) ~= nil)
+end)
+
+probe("20 coroutine yield/resume and dead state", function()
+    local co = coroutine.create(function(start)
+        local a, b = coroutine.yield("phase1", start + 1, nil)
+        return "phase2", a * 2, b
+    end)
+    equal(coroutine.status(co), "suspended")
+    local first = table.pack(coroutine.resume(co, 10))
+    equal(first.n, 4)
+    equal(first[1], true)
+    equal(first[2], "phase1")
+    equal(first[3], 11)
+    equal(first[4], nil)
+    local second = table.pack(coroutine.resume(co, 7, "ok"))
+    equal(second.n, 4)
+    equal(second[1], true)
+    equal(second[2], "phase2")
+    equal(second[3], 14)
+    equal(second[4], "ok")
+    equal(coroutine.status(co), "dead")
+    equal(select(1, coroutine.resume(co)), false)
+end)
+
+probe("21 coroutine.wrap with multiple suspensions", function()
+    local wrapped = coroutine.wrap(function()
+        coroutine.yield("one", nil)
+        coroutine.yield("two", 2)
+        return "done", 3
+    end)
+    local a = table.pack(wrapped())
+    local b = table.pack(wrapped())
+    local c = table.pack(wrapped())
+    equal(a.n, 2)
+    equal(a[1], "one")
+    equal(a[2], nil)
+    equal(b[1], "two")
+    equal(b[2], 2)
+    equal(c[1], "done")
+    equal(c[2], 3)
+end)
+
+probe("22 table.pack/unpack through sparse slots", function()
+    local t = table.pack("a", nil, "c", false)
+    equal(t.n, 4)
+    local p = table.pack(table.unpack(t, 1, t.n))
+    equal(p.n, 4)
+    equal(p[1], "a")
+    equal(p[2], nil)
+    equal(p[3], "c")
+    equal(p[4], false)
+end)
+
+probe("23 Luau table.create/clone/clear", function()
+    local t = table.create(3, 7)
+    equal(#t, 3)
+    equal(t[3], 7)
+    local clone = table.clone(t)
+    clone[1] = 99
+    equal(t[1], 7)
+    equal(clone[1], 99)
+    table.clear(t)
+    equal(next(t), nil)
+    equal(clone[2], 7)
+end)
+
+probe("24 table.freeze and isfrozen", function()
+    local t = { marker = 42 }
+    equal(table.isfrozen(t), false)
+    table.freeze(t)
+    equal(table.isfrozen(t), true)
+    equal(t.marker, 42)
+    local ok = pcall(function()
+        t.marker = 99
+    end)
+    equal(ok, false)
+    equal(t.marker, 42)
+end)
+
+probe("25 table.move overlapping ranges", function()
+    local t = { 10, 20, 30, 40, 50 }
+    table.move(t, 1, 4, 2)
+    equal(t[1], 10)
+    equal(t[2], 10)
+    equal(t[3], 20)
+    equal(t[4], 30)
+    equal(t[5], 40)
+end)
+
+probe("26 pattern captures, balanced matches, gsub", function()
+    equal(string.match("a(b(c)d)e", "%b()"), "(b(c)d)")
+    local changed, count = string.gsub("a1 b22 c333", "(%a)(%d+)", function(letter, digits)
+        return letter .. tostring(#digits)
+    end)
+    equal(changed, "a1 b2 c3")
+    equal(count, 3)
+    local startPos, endPos = string.find("aa.b", "a.b", 1, true)
+    equal(startPos, 2)
+    equal(endPos, 4)
+end)
+
+probe("27 interpolation, split, byte indexing", function()
+    local name = "Luau"
+    local result = `hello {name}: {2 + 3}`
+    equal(result, "hello Luau: 5")
+    local parts = string.split("a,,b", ",")
+    equal(#parts, 3)
+    equal(parts[1], "a")
+    equal(parts[2], "")
+    equal(parts[3], "b")
+    equal(string.sub("ABCDE", -3, -1), "CDE")
+    equal(string.byte("ABC", 2), 66)
+end)
+
+probe("28 numeric floor/modulo and bit32", function()
+    equal(-7 // 3, -3)
+    equal(7 // -3, -3)
+    equal(-7 % 3, 2)
+    equal(7 % -3, -2)
+    equal(bit32.band(0xF0, 0x3C), 0x30)
+    equal(bit32.bxor(0xAA, 0xFF), 0x55)
+    equal(bit32.extract(0x12345678, 8, 8), 0x56)
+    equal(bit32.lshift(1, 31), 2147483648)
+    equal(bit32.rshift(0x80000000, 31), 1)
+end)
+
+probe("29 200-round numeric/bitwise golden checksum", function()
+    local state = 0x12345678
+    local checksum = 0
+    for _ = 1, 200 do
+        state = (1664525 * state + 1013904223) % 4294967296
+        checksum = bit32.bxor(checksum, state)
+    end
+    equal(state, 0x30A800E0)
+    equal(checksum, 0x7BC3E670)
+end)
+
+probe("30 sorted records and dictionary identity", function()
+    local records = {
+        { score = 7, id = "c" },
+        { score = 2, id = "a" },
+        { score = 5, id = "b" },
+    }
+    table.sort(records, function(a, b)
+        return a.score < b.score
+    end)
+    equal(records[1].id, "a")
+    equal(records[2].id, "b")
+    equal(records[3].id, "c")
+    local t = { [1] = "number", ["1"] = "string", [false] = "boolean" }
+    equal(t[1], "number")
+    equal(t["1"], "string")
+    equal(t[false], "boolean")
+end)
+
+print("")
+print(string.format("LUAU IMPOSTOR DETECTOR: %d / %d passed", passed, passed + failed))
+if failed > 0 then
+    print("Failures:")
+    for _, message in ipairs(failures) do
+        print("  " .. message)
+    end
+    error(string.format("Compatibility mismatch: %d failed probe(s)", failed), 0)
+else
+    print("All runtime probes passed. Behavior matches this Luau test profile.")
+end

@@ -1,0 +1,23 @@
+local a: {any} = {1, nil, 3, nil, 5}
+local count = 0
+for key, value in a do print("bare", key, value); count += 1 end
+print("bare-count", count)
+count = 0
+for key, value in pairs(a) do print("pairs", key, value); count += 1 end
+print("pairs-count", count)
+count = 0
+for _ in ipairs(a) do count += 1 end
+print("ipairs-count", count)
+local key, value = next(a)
+local seen = 0
+while key ~= nil do
+    seen += 1
+    key, value = next(a, key)
+end
+print("next-count", seen)
+local m: {[any]: any} = {[1] = nil, ["a"] = 1, [false] = nil}
+local onlyKey, onlyValue = next(m)
+print(onlyKey, onlyValue)
+m["a"] = nil
+local noKey, noValue = next(m, onlyKey)
+print(noKey, noValue)

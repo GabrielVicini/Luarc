@@ -1,0 +1,11 @@
+[package]
+name = "editor_host"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+toml = "1.1"
+eframe = { version = "=0.31.1", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
+
+[workspace]

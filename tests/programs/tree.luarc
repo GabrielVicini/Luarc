@@ -1,0 +1,36 @@
+-- Recursive records: a binary search tree with optional children.
+type Tree = {key: number, left: Tree?, right: Tree?}
+
+local function insert(t: Tree?, key: number): Tree
+    if t == nil then
+        return {key = key, left = nil, right = nil}
+    end
+    if key < t.key then
+        t.left = insert(t.left, key)
+    else
+        t.right = insert(t.right, key)
+    end
+    return t
+end
+
+local function inorder(t: Tree?, out: {number})
+    if t then
+        inorder(t.left, out)
+        table.insert(out, t.key)
+        inorder(t.right, out)
+    end
+end
+
+local function height(t: Tree?): number
+    if not t then return 0 end
+    return 1 + math.max(height(t.left), height(t.right))
+end
+
+local root: Tree? = nil
+for _, k in ipairs({50, 30, 70, 20, 40, 60, 80, 35}) do
+    root = insert(root, k)
+end
+local keys = {}
+inorder(root, keys)
+print(table.concat(keys, " "))
+print("height", height(root))

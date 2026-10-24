@@ -1,0 +1,6 @@
+# luarc project manifest
+[package]
+name = "bench"
+
+[dependencies.fixture]
+path = "../fixtures/fixture_crate"

@@ -1,0 +1,2 @@
+for x in function(a,b,c) return 1 end do print(x) end
+-- expect-error: 1:1: an iterator function takes at most state and control parameters

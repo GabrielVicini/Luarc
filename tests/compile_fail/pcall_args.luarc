@@ -1,0 +1,2 @@
+local ok = pcall(42, "x")
+-- expect-error: 1:18: pcall expects a function, got number

@@ -1,0 +1,36 @@
+-- `and`/`or` whose operands have different types and whose left operand decides at
+-- compile time (a literal, or a value that cannot be nil), plus `not` on any value.
+
+local calls = 0
+local function bump()
+    calls += 1
+    return "CALLED"
+end
+
+print(false and bump(), true or bump(), 0 or bump(), "" and "yes", nil or "fallback")
+print(true and "right", false or "right", 1 and 2, "a" or "b", 0 and "zero is true")
+print(false and 1, true or "x", ({}) and "table")
+print(not 0, not "", not nil, not false, not {})
+print(calls)
+
+local function pick(flag)
+    return flag and "yes" or "no"
+end
+print(pick(true), pick(false))
+
+-- the dead operand never runs, even when it would fail
+print(pcall(function() return true or error("not reached") end))
+print(pcall(function() return 1 or error("not reached") end))
+print(pcall(function() return nil or error("reached", 0) end))
+print(pcall(function() return false and error("not reached") end))
+print(pcall(function() return "x" and error("reached", 0) end))
+
+-- chains
+local a = 5
+print(a > 3 and "big" or "small", a > 9 and "big" or "small")
+print(nil or false or "last", false or nil)
+print(1 and nil, 1 and false, nil and 1)
+local function f(x)
+    return x or "default"
+end
+print(f(nil), f("given"), f(false))

@@ -1,0 +1,28 @@
+-- and/or return operands; short-circuit; truthiness (0 and "" are truthy).
+local trace = ""
+local function t(x: number): number trace ..= x .. ";" return x end
+local function f(x: boolean): boolean trace ..= (if x then "T;" else "F;") return x end
+print(nil or 1, 1 or 2, false or true, 0 and "zero-truthy", "" and "empty-truthy")
+print(f(false) and f(true), trace); trace = ""
+print(f(true) or f(false), trace); trace = ""
+print(f(true) and f(false) or f(true), trace); trace = ""
+print(t(1) > 0 and t(2) > 0, trace); trace = ""
+print(t(-1) > 0 and t(2) > 0, trace); trace = ""
+print(not nil, not 0, not false, not not true)
+local M = {}
+M.f = function(a) return a or true end
+print(M.f(false), M.f(true))
+local function g(a: boolean?): boolean? return a end
+local fa = g(false)
+local r = fa and "x"
+if r then print("truthy") else print("falsy") end
+print(not r)
+local nb = g(nil)
+local r2 = nb and "y"
+if r2 then print("truthy") else print("falsy") end
+local tr = g(true)
+local r3 = tr and "z"
+if r3 then print("truthy", r3) else print("falsy") end
+local c = 3
+print(if c > 2 then "big" elseif c > 1 then "mid" else "small")
+print(if c > 5 then "big" elseif c > 1 then "mid" else "small")

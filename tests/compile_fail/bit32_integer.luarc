@@ -1,0 +1,3 @@
+-- expect-error: 3:18: a value of type integer cannot be converted to 'any'
+local n:integer=5
+print(bit32.band(n))

@@ -1,0 +1,6 @@
+local p = "(%w)"
+p = p .. "x"
+for a in string.gmatch("abc", p) do
+    print(a)
+end
+-- expect-error: 3:31: string.gmatch needs a pattern known at compile time (a literal, or a local initialized with one and never reassigned)

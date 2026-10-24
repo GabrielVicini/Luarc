@@ -1,0 +1,30 @@
+error:	lifetimes.luarc:9: number 256 is out of range for u8
+error:	lifetimes.luarc:10: number -1 is out of range for u8
+error:	lifetimes.luarc:11: number 1.5 has no integer representation (expected u8)
+error:	lifetimes.luarc:12: number nan has no integer representation (expected u8)
+255	9007199254740992	18446744073709551614
+error:	lifetimes.luarc:14: integer 18446744073709551614 has no exact number representation
+error:	lifetimes.luarc:15: number 1e+300 is out of range for f32
+inf
+error:	lifetimes.luarc:18: string is not valid UTF-8 (invalid byte at offset 3)
+4
+error:	lifetimes.luarc:20: expected an array of exactly 2 elements, got 3
+alias	5	true
+distinct	false
+error:	lifetimes.luarc:33: Counter object is already in use by an active native call (reentrant access from a callback)
+after reentrancy	6	0
+error:	lifetimes.luarc:42: callback failed at 4
+books: 15	15	0
+error:	lifetimes.luarc:54: Ledger object was consumed by 'finish' and can no longer be used
+error:	lifetimes.luarc:55: Ledger object was consumed by 'finish' and can no longer be used
+Ledger (consumed by finish)
+ledgers live	1
+after close	0
+error:	lifetimes.luarc:63: Ledger object has been closed
+pools live while leased	1	1
+pools live after lease dropped	0
+tracked after loop	0
+error:	lifetimes.luarc:81: tracked_then_fail: invalid port number 'x'
+tracked after error	0
+tracked during scope	1
+tracked after scope	0

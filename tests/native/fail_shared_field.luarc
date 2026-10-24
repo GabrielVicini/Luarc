@@ -1,0 +1,6 @@
+-- A borrowed view of an object luarc represents as shared (Arc) is unsupported:
+-- a diagnostic at the use, not Rust that fails to compile.
+local fx = require("rust:fixture")
+local h = fx.Hub.new("a")
+print(h.beacon:hits())
+-- expect-error: 5:9: unsupported use of native item 'Hub.beacon': field 'beacon' holds a Beacon by value

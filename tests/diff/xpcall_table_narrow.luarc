@@ -1,0 +1,5 @@
+local function produce() return {x=42} end
+local ok,result=xpcall(produce,function(err)return err end)
+if type(result)=="table" then
+ print(ok,result.x)
+end

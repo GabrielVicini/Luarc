@@ -1,0 +1,72 @@
+-- rust:std acceptance: files, directories, metadata, paths, errors, cleanup.
+-- Everything happens inside a fresh directory under the system temp dir.
+local std = require("rust:std")
+
+local started = std.time.Instant.now()
+local root = std.env.temp_dir():join("luarc-fs-test-" .. std.process.id())
+std.fs.create_dir_all(root)
+
+-- text and binary data
+local notes = root:join("notes.txt")
+std.fs.write(notes, "line one\nline two\n")
+local text = std.fs.read_to_string(notes)
+print(#text, text == "line one\nline two\n")
+
+local blob = root:join("data.bin")
+std.fs.write(blob, "\0\1\2\255")
+local bytes = std.fs.read(blob)
+print(#bytes, string.byte(bytes, 4))
+
+-- invalid UTF-8 is a catchable error from read_to_string, not lossy text
+local ok, err = pcall(function() return std.fs.read_to_string(blob) end)
+print(ok, string.find(tostring(err), "valid UTF-8", 1, true) ~= nil)
+
+-- directory listing (native iterator; sorted for a stable output)
+std.fs.create_dir(root:join("sub"))
+local names = {}
+for entry in std.fs.read_dir(root) do
+    table.insert(names, entry:file_name():to_str() or "?")
+end
+table.sort(names)
+print(table.concat(names, ","))
+
+-- metadata
+local meta = std.fs.metadata(notes)
+print(meta:is_file(), meta:is_dir(), meta:len())
+print(std.fs.metadata(root:join("sub")):is_dir())
+
+-- paths (results that may be absent are optional values)
+local p = root:join("sub"):join("deep.txt")
+local fname = p:file_name()
+local ext = p:extension()
+if fname and ext then
+    print(fname:to_str(), ext:to_str(), p:starts_with(root))
+end
+local parent = p:parent()
+print(parent ~= nil and parent:ends_with("sub"))
+
+-- a missing file is a source error carrying the call site
+local ok2, err2 = pcall(function() return std.fs.read_to_string(root:join("missing.txt")) end)
+print(ok2, string.find(tostring(err2), "fs.luarc:", 1, true) ~= nil)
+
+-- Read/Write traits through File handles; `<close>` releases on every exit path
+do
+    local f <close> = std.fs.File.create(p)
+    f:write_all("written through Write\n")
+    f:flush()
+end
+local reader = std.io.BufReader.new(std.fs.File.open(p))
+for line in reader:lines() do
+    print("line:", line)
+end
+
+-- environment arguments and monotonic time
+local argc = 0
+for _ in std.env.args() do
+    argc += 1
+end
+print("args", argc >= 1)
+print("elapsed is non-negative", started:elapsed():as_secs_f64() >= 0)
+
+std.fs.remove_dir_all(root)
+print("exists after cleanup", std.fs.exists(root))

@@ -1,0 +1,4 @@
+local function f()
+    print("x")
+
+-- expect-error: 5:1: expected 'end' to close function

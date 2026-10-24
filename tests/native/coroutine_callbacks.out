@@ -1,0 +1,5 @@
+synchronous	false
+false	attempt to yield across metamethod/C-call boundary
+retained	false
+false	attempt to yield across metamethod/C-call boundary
+dead

@@ -1,0 +1,20 @@
+# Protocol metadata for regex's builder types: these `&mut self -> &mut Self`
+# methods return their own receiver, so the source result is the same handle
+# (identity shortcut). Without this metadata a `&mut Self` result is treated as
+# an arbitrary borrowed object: usable immediately in a method chain, never
+# assumed to be the receiver. Validated against the extracted signatures.
+adapter = "regex-builders"
+adapter_version = 1
+crate = "regex"
+
+[[returns_receiver]]
+type = "RegexBuilder"
+method = "case_insensitive"
+
+[[returns_receiver]]
+type = "RegexBuilder"
+method = "multi_line"
+
+[[returns_receiver]]
+type = "RegexBuilder"
+method = "unicode"

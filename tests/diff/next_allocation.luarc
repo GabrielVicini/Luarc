@@ -1,0 +1,10 @@
+local function show(label,t,k)
+ local ok,e=pcall(function() return next(t,k)==nil end)
+ if ok then print(label,true,e) else print(label,false,string.find(tostring(e),"invalid key to 'next'",1,true)~=nil) end
+end
+local a={};a[1]=1;a[2]=2;a[3]=3;show("set3-key4",a,4)
+local b={};for i=1,3 do b[i]=i end;show("varset3-key4",b,4)
+local c={};for i=1,3 do table.insert(c,i) end;show("push3-key4",c,4)
+local d={1,2};table.insert(d,3);show("lit2-push3-key4",d,4)
+local e={1,2,3};e[4]=4;e[5]=5;show("lit3-set5-key6",e,6);show("lit3-set5-key8",e,8)
+local f={1,2,3};table.insert(f,4);table.insert(f,5);show("lit3-push5-key8",f,8)

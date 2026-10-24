@@ -1,0 +1,12 @@
+# luarc project manifest: add Rust crates under [dependencies.NAME]
+[package]
+name = "playground"
+
+[dependencies.glyphon]
+version = "=0.12.0"
+
+[dependencies.wgpu]
+version = "=30.0.0"
+
+[dependencies.winit]
+version = "=0.30.12"

@@ -1,0 +1,43 @@
+-- table.unpack: a run-time number of results.
+local t = {10, 20, 30}
+print(table.unpack(t))
+print(table.unpack(t, 2))
+print(table.unpack(t, 0, 4))
+print(table.unpack(t, 2.7, 3.9))
+print(select("#", table.unpack(t, 3, 1)), select("#", table.unpack({}, 1, 0)))
+print(select(-1, table.unpack(t)), select("#", table.unpack(t, 1, 5)))
+
+-- adjusted to a fixed count, one value, in the middle of a list
+local a, b, c, d = table.unpack(t)
+print(a, b, c, d)
+local x = table.unpack(t, 3)
+print(x, table.unpack(t, 2), table.unpack(t, 1, 1))
+
+-- as arguments, in constructors, and returned
+local function sum(...: number): number
+  local s = 0
+  for _, v in ipairs({...}) do s += v end
+  return s
+end
+local function add(p: number?, q: number?): number
+  return (p or 0) + (q or 0)
+end
+print(sum(table.unpack(t)), sum(1, table.unpack(t, 2)), add(table.unpack(t)))
+local copy = {0, table.unpack(t)}
+print(#copy, copy[1], copy[4])
+local function middle(arr: {number})
+  return table.unpack(arr, 2, #arr - 1)
+end
+print(middle({1, 2, 3, 4, 5}))
+print(select("#", middle({1, 2})))
+
+-- strings, and nil arguments meaning the defaults
+local words = {"a", "b", "c"}
+local j: number? = nil
+print(table.unpack(words, nil, j))
+print(table.concat({table.unpack(words, 2)}, "+"))
+
+-- errors
+print(pcall(function() return select("#", table.unpack({}, 1, 1e8)) end))
+print(pcall(function() return select("#", table.unpack({}, 0 / 0)) end))
+print(pcall(function() return select("#", table.unpack({}, 1, 7997)) end))

@@ -1,0 +1,5 @@
+local record: { value: any } = { value = "signal" }
+local value: string = record.value
+local other = setmetatable({}, { __index = { field = 3 } })
+print(other.field)
+-- expect-error: 2:30: type mismatch: expected any, found string

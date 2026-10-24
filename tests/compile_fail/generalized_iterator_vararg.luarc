@@ -1,0 +1,2 @@
+for k in function(...) return 1 end do break end
+-- expect-error: 1:1: variadic iterator functions are unsupported

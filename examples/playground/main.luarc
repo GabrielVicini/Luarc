@@ -1,0 +1,968 @@
+-- BUILD: PIXEL_FRONTIER_R3_EVENT_ROUTING_AND_MOUSE_FILTER
+-- EVI / PIXEL FRONTIER
+-- Single-file native Luau port of kernel.lua + the supplied libraries.text engine.
+-- Requires ONLY font.bin in the launch/project directory, plus rust:std/winit/wgpu.
+-- The old font engine is embedded below: same 16x16 glyphs, 32 bytes/codepoint,
+-- big-endian rows, 8px ASCII advance, 16px Unicode advance. No glyphon or FFI.
+-- GPU voxel DDA, procedural 16x16 block textures, water reflections/transmission,
+-- voxel sun shadows, neighbourhood AO, fog, clouds, 192x96x192 editable world.
+-- Player ticks at 60 Hz. Sand/water/acid simulation ticks at 20 Hz.
+-- Stable terrain does not collapse; disjoint particle pairs avoid double movement.
+-- WASD move; mouse look; Space jump/swim/up; Shift sprint; Ctrl fly down.
+-- F flight; P pause materials; L day/sunset/night; O pixel resolution; R rebuild.
+-- 1..9,0 materials; -/+ brush radius; left mine; right place.
+-- Esc releases mouse, Esc again exits; click to recapture.
+-- Native importer integration cannot be executed here; embedded WGSL is validated
+-- and exercised through wgpu separately. No gsub, string.pack, native tuple keys,
+-- bracket-indexed native fields, Rust Range records, or glyphon dependencies.
+local std = require("rust:std")
+local winit = require("rust:winit")
+local wgpu = require("rust:wgpu")
+
+local WORLD_X, WORLD_Y, WORLD_Z = 192, 96, 192
+local WORLD_BYTES = WORLD_X * WORLD_Y * WORLD_Z * 4
+local IMAGE_BYTES = 1280 * 720 * 4
+local PLAYER_DT = 1 / 60
+local MAX_CATCHUP = 6
+
+-- Binary strings are the importer's representation for &[u8].
+local function u32(n: number?): string
+    if n ~= nil then
+        local value = math.floor(n) % 4294967296
+        return string.char(value % 256, math.floor(value / 256) % 256,
+            math.floor(value / 65536) % 256, math.floor(value / 16777216) % 256)
+    else
+        error("missing number in GPU packet")
+    end
+end
+local function zero_bytes(count: number): string
+    local result = ""
+    for _ = 1, count do result = result .. "\000" end
+    return result
+end
+
+-- Port of libraries.text, embedded to honour the one-file requirement.
+-- loadFont keeps font.bin in its ORIGINAL format; GPU code does the same bit test
+-- as drawChar in the supplied engine. drawText emits compact glyph commands.
+local text = { count = 0, bytes = "" }
+function text.loadFont(device, filepath)
+    return device:create_buffer_init({
+        label = "original font.bin / 16x16 BMP bitmap font",
+        contents = std.fs.read(filepath),
+        usage = wgpu.BufferUsages.STORAGE,
+    })
+end
+function text.begin()
+    text.count = 0
+    text.bytes = ""
+end
+function text.drawChar(x, y, codepoint, r, g, b, scale)
+    if text.count >= 1024 then return end
+    if codepoint == nil then return end
+    if codepoint < 0 or codepoint > 65535 then codepoint = 63 end
+    text.bytes = text.bytes .. u32(x) .. u32(y) .. u32(codepoint)
+        .. u32(r + g * 256 + b * 65536 + scale * 16777216)
+    text.count += 1
+end
+function text.drawText(x, y, value, r, g, b, scale)
+    local i = 1
+    while i <= #value do
+        local first = string.byte(value, i)
+        if first == nil then return end
+        local cp = first
+        local length = 1
+        if first >= 240 and first < 245 then cp = first % 8 length = 4
+        elseif first >= 224 and first < 240 then cp = first % 16 length = 3
+        elseif first >= 194 and first < 224 then cp = first % 32 length = 2
+        elseif first >= 128 then cp = 63 end
+        if i + length - 1 > #value then cp = 63 length = 1 end
+        for j = 1, length - 1 do
+            local continuation = string.byte(value, i + j)
+            if continuation == nil then
+                cp = 63
+            elseif continuation >= 128 and continuation < 192 then
+                cp = cp * 64 + continuation % 64
+            else cp = 63 end
+        end
+        if (length == 2 and cp < 128) or (length == 3 and cp < 2048)
+            or (length == 4 and cp < 65536) or (cp >= 55296 and cp <= 57343) then cp = 63 end
+        text.drawChar(x, y, cp, r, g, b, scale)
+        if cp > 255 then x += 16 * scale else x += 8 * scale end
+        i += length
+    end
+end
+
+local WORLD_SHADER = [=[
+
+const SX: i32 = 192;
+const SY: i32 = 96;
+const SZ: i32 = 192;
+const SEA: i32 = 29;
+const DT: f32 = 0.01666666667;
+struct Controls { a: vec4u, b: vec4u, c: vec4u, d: vec4u, }
+struct Camera { pos: vec4f, look: vec4f, hit: vec4i, place: vec4i, clock: vec4u, }
+fn index_of(p: vec3i) -> u32 { return u32(p.x + SX*(p.z+SZ*p.y)); }
+fn inside(p: vec3i) -> bool { return all(p >= vec3i(0)) && all(p < vec3i(SX,SY,SZ)); }
+fn hash(p: vec3i) -> u32 {
+    var h = u32(p.x)*374761393u + u32(p.y)*668265263u + u32(p.z)*2246822519u;
+    h = (h ^ (h >> 13u))*1274126177u;
+    return h ^ (h >> 16u);
+}
+fn rnd(p: vec3i) -> f32 { return f32(hash(p)&65535u)/65535.; }
+fn height_at(p: vec2i) -> i32 {
+    let q = vec2f(p);
+    let hills = sin(q.x*0.037)*cos(q.y*0.029)*11. + sin(q.x*0.083+q.y*0.051)*4.;
+    let ridge = pow(abs(sin(q.x*0.019+q.y*0.013)),3.)*15.;
+    let river = exp(-pow((q.y-92.-sin(q.x*0.035)*19.)/8.,2.))*17.;
+    return i32(34.+hills+ridge-river);
+}
+fn terrain(p: vec3i) -> u32 {
+    if p.y < 0 { return 3u; }
+    if p.y >= SY { return 0u; }
+    let h = height_at(p.xz);
+    if p.y <= h {
+        if p.y == 0 { return 3u; }
+        let cave = sin(f32(p.x)*0.16)*cos(f32(p.z)*0.13)*sin(f32(p.y)*0.22);
+        if p.y < h-5 && p.y > 5 && cave > 0.58 {
+            if rnd(p) > 0.985 { return 10u; }
+            return 0u;
+        }
+        if p.y < h-4 { return 3u; }
+        if h < SEA+3 { return 4u; }
+        if p.y == h { return 1u; }
+        return 2u;
+    }
+    if p.y <= SEA { return 5u; }
+    // One deterministic tree per 12x12 tile; its crown fits inside that tile.
+    let tile = vec2i(floor(vec2f(p.xz)/12.));
+    let tree = tile*12+vec2i(6);
+    let base = height_at(tree);
+    let tall = 5+i32(hash(vec3i(tree.x,0,tree.y))%3u);
+    let relative = vec3i(p.x-tree.x,p.y-base,p.z-tree.y);
+    if base > SEA+2 && rnd(vec3i(tree.x,1,tree.y)) > 0.30 {
+        if relative.x == 0 && relative.z == 0 && relative.y > 0 && relative.y < tall+1 { return 7u; }
+        let crown = vec3f(relative-vec3i(0,tall,0));
+        if dot(crown,crown*vec3f(1.,1.3,1.)) < 11. && relative.y > 2 { return 8u; }
+    }
+    return 0u;
+}
+fn solid(m: u32) -> bool { return m != 0u && m != 5u && m != 6u; }
+fn liquid(m: u32) -> bool { return m == 5u || m == 6u; }
+fn loose(m: u32) -> bool { return m == 4u || liquid(m); }
+fn forward(yaw: f32, pitch: f32) -> vec3f { return vec3f(sin(yaw)*cos(pitch),sin(pitch),cos(yaw)*cos(pitch)); }
+
+@group(0) @binding(0) var<storage,read> src: array<u32>;
+@group(0) @binding(1) var<storage,read_write> dst: array<u32>;
+@group(0) @binding(2) var<uniform> control: Controls;
+@group(0) @binding(3) var<storage,read_write> camera: Camera;
+fn block(p: vec3i) -> u32 {
+    if inside(p) { return src[index_of(p)]; }
+    return terrain(p);
+}
+@compute @workgroup_size(8,4,8)
+fn generate(@builtin(global_invocation_id) id: vec3u) {
+    let p = vec3i(id);
+    if !inside(p) { return; }
+    dst[index_of(p)] = terrain(p);
+    if all(id == vec3u(0)) {
+        let x = SX/2;
+        let z = SZ/2-30;
+        camera.pos = vec4f(f32(x)+0.5,f32(height_at(vec2i(x,z)))+3.,f32(z)+0.5,0.);
+        camera.look = vec4f(-0.45,-0.12,0.,0.);
+        camera.hit = vec4i(-1);
+        camera.place = vec4i(-1);
+        camera.clock = vec4u(0);
+    }
+}
+fn body_free(p: vec3f) -> bool {
+    for (var y = 0; y < 3; y += 1) {
+        for (var x = 0; x < 2; x += 1) {
+            for (var z = 0; z < 2; z += 1) {
+                let sample_pos = p+vec3f(select(-0.27,0.27,x==1),-1.55+f32(y)*0.77,select(-0.27,0.27,z==1));
+                if solid(block(vec3i(floor(sample_pos)))) { return false; }
+            }
+        }
+    }
+    return true;
+}
+@compute @workgroup_size(1)
+fn player() {
+    let keys = control.b.z;
+    var yaw=camera.look.x;
+    var pitch=camera.look.y;
+    if camera.clock.y!=control.b.x {
+        yaw+=f32(bitcast<i32>(control.b.w))*0.0025;
+        pitch=clamp(pitch-f32(bitcast<i32>(control.c.x))*0.0025,-1.5,1.5);
+        camera.clock.y=control.b.x;
+    }
+    camera.clock.x+=1u;
+    camera.look.x = yaw;
+    camera.look.y = pitch;
+    var movement = vec3f(0.);
+    let f = vec3f(sin(yaw),0.,cos(yaw));
+    let r = vec3f(cos(yaw),0.,-sin(yaw));
+    if (keys&1u)!=0u { movement += f; }
+    if (keys&2u)!=0u { movement -= f; }
+    if (keys&4u)!=0u { movement -= r; }
+    if (keys&8u)!=0u { movement += r; }
+    if length(movement)>0. { movement=normalize(movement); }
+    var speed=5.5;
+    if (keys&32u)!=0u { speed=10.; }
+    let flying = (keys&64u)!=0u;
+    var p=camera.pos.xyz;
+    var vy=camera.pos.w;
+    if flying {
+        if (keys&16u)!=0u { movement.y += 1.; }
+        if (keys&128u)!=0u { movement.y -= 1.; }
+        p += movement*speed*DT;
+        vy=0.;
+    } else {
+        let swimming=liquid(block(vec3i(floor(p-vec3f(0.,0.8,0.)))));
+        if swimming {
+            speed*=0.55;
+            vy=vy*0.92-3.*DT;
+            if (keys&16u)!=0u { vy=3.; }
+        } else {
+            if (keys&16u)!=0u && camera.look.z>0.5 { vy=8.; }
+            vy=max(-24.,vy-22.*DT);
+        }
+        let motion=movement*speed*DT;
+        if body_free(p+vec3f(motion.x,0.,0.)) { p.x+=motion.x; }
+        if body_free(p+vec3f(0.,0.,motion.z)) { p.z+=motion.z; }
+        camera.look.z=0.;
+        // Three substeps prevent tunnelling at terminal velocity.
+        for (var i=0;i<3;i+=1) {
+            let next=p+vec3f(0.,vy*DT/3.,0.);
+            if body_free(next) { p=next; }
+            else { if vy<0. { camera.look.z=1.; } vy=0.; }
+        }
+    }
+    p.x=clamp(p.x,1.,f32(SX)-1.);
+    p.z=clamp(p.z,1.,f32(SZ)-1.);
+    p.y=clamp(p.y,2.,f32(SY)-2.);
+    camera.pos=vec4f(p,vy);
+    let direction=forward(yaw,pitch);
+    var previous=vec3i(floor(p));
+    camera.hit=vec4i(-1);
+    camera.place=vec4i(-1);
+    // Exact enough for interaction; rendering uses full voxel DDA.
+    for (var i=1;i<=120;i+=1) {
+        let cell=vec3i(floor(p+direction*(f32(i)*0.075)));
+        let m=block(cell);
+        if m!=0u {
+            camera.hit=vec4i(cell,i32(m));
+            camera.place=vec4i(previous,0);
+            break;
+        }
+        previous=cell;
+    }
+}
+@compute @workgroup_size(8,4,8)
+fn simulate(@builtin(global_invocation_id) id: vec3u) {
+    let p=vec3i(id);
+    if !inside(p) { return; }
+    let tick=camera.clock.x/3u;
+    var m=src[index_of(p)];
+    if p.y>0 && control.c.w==0u {
+        let stage=tick%4u;
+        var axis=vec3i(0,1,0);
+        if stage==1u { axis=vec3i(1,0,0); }
+        if stage==3u { axis=vec3i(0,0,1); }
+        let parity=i32((tick/4u)%2u);
+        let coordinate=dot(p,axis);
+        let is_low=((coordinate+parity)&1)==0;
+        let partner=p+axis*select(-1,1,is_low);
+        if inside(partner) && partner.y>0 {
+            let other=src[index_of(partner)];
+            let low=select(other,m,is_low);
+            let high=select(m,other,is_low);
+            var exchange=false;
+            if axis.y==1 {
+                exchange=(loose(high) && low==0u) || (high==4u && liquid(low));
+            } else {
+                // Disjoint pairs preserve mass; supported liquids spread laterally.
+                exchange=(liquid(m)&&other==0u)||(m==0u&&liquid(other));
+                let pair_origin=min(p,partner);
+                exchange=exchange && (hash(pair_origin+vec3i(i32(tick)))&3u)!=0u;
+            }
+            if exchange { m=other; }
+        }
+        // Acid dissolves neighbouring terrain at tick rate, never at frame rate.
+        if m==1u || m==2u || m==4u || m==7u || m==8u {
+            if (tick%3u)==0u && (block(p+vec3i(1,0,0))==6u || block(p-vec3i(1,0,0))==6u || block(p+vec3i(0,1,0))==6u) { m=0u; }
+        }
+    }
+    let actions=control.c.y;
+    let brush=i32(control.d.z);
+    let hit=camera.hit.xyz;
+    let place=camera.place.xyz;
+    if (actions&1u)!=0u && camera.hit.w>=0 && all(abs(p-hit)<=vec3i(brush)) && p.y>0 { m=0u; }
+    if (actions&2u)!=0u && camera.place.x>=0 && all(abs(p-place)<=vec3i(brush)) && p.y>0 {
+        let d=abs(vec3f(p)+0.5-camera.pos.xyz);
+        if !(d.x<0.8 && d.z<0.8 && vec3f(p).y<camera.pos.y+0.2 && vec3f(p).y>camera.pos.y-2.) {
+            m=control.c.z;
+        }
+    }
+    dst[index_of(p)]=m;
+}
+]=]
+
+local TRACE_SHADER = [=[
+
+const SX: i32 = 192;
+const SY: i32 = 96;
+const SZ: i32 = 192;
+const SEA: i32 = 29;
+const DT: f32 = 0.01666666667;
+struct Controls { a: vec4u, b: vec4u, c: vec4u, d: vec4u, }
+struct Camera { pos: vec4f, look: vec4f, hit: vec4i, place: vec4i, clock: vec4u, }
+fn index_of(p: vec3i) -> u32 { return u32(p.x + SX*(p.z+SZ*p.y)); }
+fn inside(p: vec3i) -> bool { return all(p >= vec3i(0)) && all(p < vec3i(SX,SY,SZ)); }
+fn hash(p: vec3i) -> u32 {
+    var h = u32(p.x)*374761393u + u32(p.y)*668265263u + u32(p.z)*2246822519u;
+    h = (h ^ (h >> 13u))*1274126177u;
+    return h ^ (h >> 16u);
+}
+fn rnd(p: vec3i) -> f32 { return f32(hash(p)&65535u)/65535.; }
+fn height_at(p: vec2i) -> i32 {
+    let q = vec2f(p);
+    let hills = sin(q.x*0.037)*cos(q.y*0.029)*11. + sin(q.x*0.083+q.y*0.051)*4.;
+    let ridge = pow(abs(sin(q.x*0.019+q.y*0.013)),3.)*15.;
+    let river = exp(-pow((q.y-92.-sin(q.x*0.035)*19.)/8.,2.))*17.;
+    return i32(34.+hills+ridge-river);
+}
+fn terrain(p: vec3i) -> u32 {
+    if p.y < 0 { return 3u; }
+    if p.y >= SY { return 0u; }
+    let h = height_at(p.xz);
+    if p.y <= h {
+        if p.y == 0 { return 3u; }
+        let cave = sin(f32(p.x)*0.16)*cos(f32(p.z)*0.13)*sin(f32(p.y)*0.22);
+        if p.y < h-5 && p.y > 5 && cave > 0.58 {
+            if rnd(p) > 0.985 { return 10u; }
+            return 0u;
+        }
+        if p.y < h-4 { return 3u; }
+        if h < SEA+3 { return 4u; }
+        if p.y == h { return 1u; }
+        return 2u;
+    }
+    if p.y <= SEA { return 5u; }
+    // One deterministic tree per 12x12 tile; its crown fits inside that tile.
+    let tile = vec2i(floor(vec2f(p.xz)/12.));
+    let tree = tile*12+vec2i(6);
+    let base = height_at(tree);
+    let tall = 5+i32(hash(vec3i(tree.x,0,tree.y))%3u);
+    let relative = vec3i(p.x-tree.x,p.y-base,p.z-tree.y);
+    if base > SEA+2 && rnd(vec3i(tree.x,1,tree.y)) > 0.30 {
+        if relative.x == 0 && relative.z == 0 && relative.y > 0 && relative.y < tall+1 { return 7u; }
+        let crown = vec3f(relative-vec3i(0,tall,0));
+        if dot(crown,crown*vec3f(1.,1.3,1.)) < 11. && relative.y > 2 { return 8u; }
+    }
+    return 0u;
+}
+fn solid(m: u32) -> bool { return m != 0u && m != 5u && m != 6u; }
+fn liquid(m: u32) -> bool { return m == 5u || m == 6u; }
+fn loose(m: u32) -> bool { return m == 4u || liquid(m); }
+fn forward(yaw: f32, pitch: f32) -> vec3f { return vec3f(sin(yaw)*cos(pitch),sin(pitch),cos(yaw)*cos(pitch)); }
+
+@group(0) @binding(0) var<storage,read> world: array<u32>;
+@group(0) @binding(1) var<uniform> control: Controls;
+@group(0) @binding(2) var<storage,read> camera: Camera;
+@group(0) @binding(3) var<storage,read_write> image: array<u32>;
+struct RayHit { cell:vec3i, normal:vec3f, point:vec3f, distance:f32, mat:u32, }
+fn block(p:vec3i)->u32 {
+    if inside(p) { return world[index_of(p)]; }
+    return terrain(p);
+}
+fn raycast(origin:vec3f,direction:vec3f,limit:f32,skip_liquids:bool)->RayHit {
+    var p=vec3i(floor(origin));
+    let step=vec3i(select(vec3f(-1.),vec3f(1.),direction>=vec3f(0.)));
+    let delta=1./max(abs(direction),vec3f(0.000001));
+    var edge=select(origin-vec3f(p),vec3f(p)+1.-origin,direction>=vec3f(0.))*delta;
+    var distance=0.;
+    var normal=vec3f(0.,1.,0.);
+    for(var i=0;i<320;i+=1) {
+        if distance>limit || p.y>=SY || p.y<0 { break; }
+        let m=block(p);
+        if m!=0u && !(skip_liquids && (liquid(m)||m==9u)) {
+            return RayHit(p,normal,origin+direction*distance,distance,m);
+        }
+        if edge.x<edge.y && edge.x<edge.z {
+            distance=edge.x;edge.x+=delta.x;p.x+=step.x;normal=vec3f(-f32(step.x),0.,0.);
+        } else if edge.y<edge.z {
+            distance=edge.y;edge.y+=delta.y;p.y+=step.y;normal=vec3f(0.,-f32(step.y),0.);
+        } else {
+            distance=edge.z;edge.z+=delta.z;p.z+=step.z;normal=vec3f(0.,0.,-f32(step.z));
+        }
+    }
+    return RayHit(p,normal,origin+direction*limit,limit,0u);
+}
+fn sunlight()->vec3f {
+    if control.d.w==1u { return normalize(vec3f(-0.6,0.20,0.38)); }
+    if control.d.w==2u { return normalize(vec3f(0.3,0.65,-0.6)); }
+    return normalize(vec3f(-0.45,0.78,0.40));
+}
+fn sky(ray:vec3f)->vec3f {
+    let sun=sunlight();
+    let horizon=pow(1.-max(ray.y,0.),4.);
+    var c=mix(vec3f(0.13,0.37,0.70),vec3f(0.68,0.84,0.92),horizon);
+    if control.d.w==1u { c=mix(vec3f(0.16,0.12,0.31),vec3f(1.0,0.52,0.23),horizon); }
+    if control.d.w==2u { c=mix(vec3f(0.012,0.022,0.065),vec3f(0.09,0.15,0.24),horizon); }
+    let s=max(dot(ray,sun),0.);
+    c+=vec3f(1.,0.72,0.38)*pow(s,180.)*0.7;
+    if s>0.9993 { c=vec3f(1.5,1.3,0.9); }
+    if ray.y>0.08 {
+        let q=ray.xz/ray.y*35.+vec2f(f32(control.d.y)*0.0007,0.);
+        let cloud=sin(q.x*0.13)*cos(q.y*0.11)+sin(q.x*0.06+q.y*0.05)*0.7;
+        let mask=smoothstep(0.8,1.25,cloud)*smoothstep(0.08,0.25,ray.y);
+        c=mix(c,vec3f(0.94,0.96,1.),mask*0.7*select(1.,0.15,control.d.w==2u));
+    }
+    return c;
+}
+fn base_color(m:u32,cell:vec3i,point:vec3f,n:vec3f)->vec3f {
+    var uv=point.xz;
+    if abs(n.x)>0.5 { uv=point.zy; }
+    if abs(n.z)>0.5 { uv=point.xy; }
+    let texel=vec2i(floor(fract(uv)*16.));
+    let noise=rnd(vec3i(cell.x*17+texel.x,cell.y*19+texel.y,cell.z*23));
+    let coarse=rnd(cell)*0.15;
+    var c=vec3f(0.6);
+    if m==1u {
+        c=vec3f(0.27,0.46,0.12);
+        if n.y<0.5 {
+            c=vec3f(0.31,0.20,0.115);
+            if fract(point.y)>0.78-noise*0.13 { c=vec3f(0.24,0.43,0.10); }
+        }
+    }
+    if m==2u { c=vec3f(0.33,0.21,0.12); }
+    if m==3u {
+        c=vec3f(0.36,0.40,0.43);
+        let seam=(texel.x+texel.y*2+i32(hash(cell)%7u))%13;
+        if seam==0 { c*=0.56; }
+    }
+    if m==4u { c=vec3f(0.79,0.65,0.36); }
+    if m==5u { c=vec3f(0.025,0.28,0.37); }
+    if m==6u { c=vec3f(0.32,0.85,0.035); }
+    if m==7u {
+        c=vec3f(0.30,0.17,0.075);
+        if n.y>0.5 { c*=0.9+0.25*sin(length(fract(point.xz)-0.5)*65.); }
+        else { c*=0.7+0.35*step(0.35,fract(uv.x*5.+noise*0.12)); }
+    }
+    if m==8u { c=vec3f(0.13,0.35,0.07); }
+    if m==9u { c=vec3f(0.6,0.87,0.94); }
+    if m==10u { c=vec3f(0.14,0.70,0.95); }
+    return c*(0.84+noise*0.25+coarse);
+}
+fn ao(hit:RayHit)->f32 {
+    var t=vec3i(1,0,0);var b=vec3i(0,0,1);
+    if abs(hit.normal.x)>0.5 { t=vec3i(0,1,0);b=vec3i(0,0,1); }
+    if abs(hit.normal.z)>0.5 { t=vec3i(1,0,0);b=vec3i(0,1,0); }
+    let outside=hit.cell+vec3i(hit.normal);
+    var amount=0.;
+    if solid(block(outside+t)) { amount+=0.12; }
+    if solid(block(outside-t)) { amount+=0.12; }
+    if solid(block(outside+b)) { amount+=0.12; }
+    if solid(block(outside-b)) { amount+=0.12; }
+    return 1.-amount;
+}
+fn shade(hit:RayHit,ray:vec3f,shadows:bool)->vec3f {
+    let sun=sunlight();
+    let albedo=base_color(hit.mat,hit.cell,hit.point,hit.normal);
+    if hit.mat==10u { return albedo*1.6; }
+    var visibility=1.;
+    if shadows && dot(hit.normal,sun)>0. {
+        let obstruction=raycast(hit.point+hit.normal*0.015,sun,40.,true);
+        if obstruction.mat!=0u { visibility=0.25; }
+    }
+    let diffuse=max(dot(hit.normal,sun),0.)*visibility;
+    var ambient=vec3f(0.30,0.38,0.46)*ao(hit);
+    var direct=vec3f(1.0,0.91,0.73)*diffuse*0.9;
+    if control.d.w==1u { direct=vec3f(1.1,0.53,0.28)*diffuse; }
+    if control.d.w==2u { ambient*=0.25;direct=vec3f(0.24,0.35,0.60)*diffuse; }
+    var c=albedo*(ambient+direct);
+    if all(hit.cell==camera.hit.xyz) {
+        var uv=fract(hit.point.xz);
+        if abs(hit.normal.x)>0.5 { uv=fract(hit.point.zy); }
+        if abs(hit.normal.z)>0.5 { uv=fract(hit.point.xy); }
+        if min(min(uv.x,uv.y),min(1.-uv.x,1.-uv.y))<0.035 { c=vec3f(1.0,0.77,0.25); }
+    }
+    return c;
+}
+@compute @workgroup_size(8,8)
+fn render(@builtin(global_invocation_id) id:vec3u) {
+    let resolution=control.a.zw;
+    if id.x>=resolution.x || id.y>=resolution.y { return; }
+    let uv=(vec2f(id.xy)+0.5-vec2f(resolution)*0.5)/f32(resolution.y);
+    let f=forward(camera.look.x,camera.look.y);
+    let right=normalize(cross(vec3f(0.,1.,0.),f));
+    let up=cross(f,right);
+    let ray=normalize(f+right*uv.x*1.35-up*uv.y*1.35);
+    let origin=camera.pos.xyz;
+    let hit=raycast(origin,ray,170.,false);
+    var c=sky(ray);
+    if hit.mat!=0u {
+        if liquid(hit.mat)||hit.mat==9u {
+            let behind=raycast(hit.point+ray*0.02,ray,60.,true);
+            var transmission=sky(ray);
+            if behind.mat!=0u { transmission=shade(behind,ray,true); }
+            let thickness=min(behind.distance,18.);
+            let tint=base_color(hit.mat,hit.cell,hit.point,hit.normal);
+            let density=select(0.055,0.15,hit.mat==6u);
+            let absorb=exp(-thickness*density);
+            c=mix(tint*0.65,transmission,absorb);
+            let reflection=reflect(ray,hit.normal);
+            let reflected_hit=raycast(hit.point+hit.normal*0.02,reflection,55.,true);
+            var reflected=sky(reflection);
+            if reflected_hit.mat!=0u { reflected=shade(reflected_hit,reflection,false); }
+            let fresnel=0.04+0.96*pow(1.-max(0.,dot(-ray,hit.normal)),5.);
+            c=mix(c,reflected,clamp(fresnel,0.08,0.85));
+            let halfvector=normalize(sunlight()-ray);
+            c+=vec3f(1.,0.83,0.56)*pow(max(dot(hit.normal,halfvector),0.),220.)*0.8;
+            if hit.mat==6u { c+=tint*0.22; }
+        } else { c=shade(hit,ray,true); }
+        let fog=1.-exp(-hit.distance*hit.distance*0.000055);
+        c=mix(c,sky(ray),fog);
+    }
+    let under=block(vec3i(floor(origin)));
+    if liquid(under) { c=mix(c,vec3f(0.015,0.24,0.31),0.52); }
+    c*=1.-0.14*dot(uv,uv);
+    // Simple filmic shoulder, then display conversion; packed image is sRGB.
+    c=c/(c+vec3f(0.35));
+    c=pow(clamp(c,vec3f(0.),vec3f(1.)),vec3f(1./2.2));
+    let rgb=vec3u(c*255.);
+    image[id.x+resolution.x*id.y]=rgb.x|(rgb.y<<8u)|(rgb.z<<16u)|0xff000000u;
+}
+]=]
+
+local PRESENT_SHADER = [=[
+
+struct Controls { a:vec4u,b:vec4u,c:vec4u,d:vec4u, }
+@group(0) @binding(0) var<uniform> control:Controls;
+@group(0) @binding(1) var<storage,read> image:array<u32>;
+@group(0) @binding(2) var<storage,read> font:array<u32>;
+// Original text engine command: x, y, BMP codepoint, packed RGB + integer scale.
+@group(0) @binding(3) var<storage,read> glyphs:array<vec4u>;
+struct Vertex { @builtin(position) position:vec4f, }
+@vertex fn vs(@builtin(vertex_index) i:u32)->Vertex {
+    var points=array<vec2f,3>(vec2f(-1.,-1.),vec2f(3.,-1.),vec2f(-1.,3.));
+    var out:Vertex;out.position=vec4f(points[i],0.,1.);return out;
+}
+fn color(packed:u32)->vec3f { return vec3f(f32(packed&255u),f32((packed>>8u)&255u),f32((packed>>16u)&255u))/255.; }
+fn font_byte(offset:u32)->u32 {
+    if offset/4u>=arrayLength(&font) { return 0u; }
+    return (font[offset/4u]>>((offset%4u)*8u))&255u;
+}
+@fragment fn fs(@builtin(position) position:vec4f)->@location(0) vec4f {
+    let p=vec2u(position.xy);
+    let pixel=min(p*control.a.zw/max(control.a.xy,vec2u(1)),control.a.zw-vec2u(1));
+    var c=color(image[pixel.x+pixel.y*control.a.z]);
+    let screen=control.a.xy;
+    // UI is native resolution while the world retains nearest-neighbour pixels.
+    if p.y<78u && p.x<470u { c=mix(c,vec3f(0.015,0.025,0.045),0.90); }
+    if p.y>=screen.y-84u && p.x>=screen.x/2u-260u && p.x<=screen.x/2u+260u { c*=0.18; }
+    let mid=vec2i(screen/2u);let delta=abs(vec2i(p)-mid);
+    if (delta.x<=5 && delta.y==0)||(delta.y<=5 && delta.x==0) { c=mix(c,vec3f(0.95),0.85); }
+    for(var i=0u;i<control.d.x;i+=1u) {
+        let glyph=glyphs[i];
+        let scale=max(1u,glyph.w>>24u);
+        if p.x<glyph.x || p.y<glyph.y || p.x>=glyph.x+16u*scale || p.y>=glyph.y+16u*scale { continue; }
+        let q=(p-glyph.xy)/scale;
+        let offset=glyph.z*32u+q.y*2u;
+        let row=(font_byte(offset)<<8u)|font_byte(offset+1u);
+        if ((row>>(15u-q.x))&1u)!=0u { c=color(glyph.w); }
+    }
+    // Convert back to linear before writing to the default sRGB surface.
+    return vec4f(pow(clamp(c,vec3f(0.),vec3f(1.)),vec3f(2.2)),1.);
+}
+]=]
+
+local material_names = { "GRASS", "DIRT", "STONE", "SAND", "WATER", "ACID", "WOOD", "LEAVES", "GLASS", "CRYSTAL" }
+local palette_r = { 112, 150, 167, 235, 65, 160, 176, 99, 175, 60 }
+local palette_g = { 196, 98, 179, 206, 185, 245, 124, 180, 230, 220 }
+local palette_b = { 69, 59, 190, 128, 228, 50, 68, 68, 245, 255 }
+
+local app = {
+    window = nil, gpu = nil, clock = nil, previous_time = 0.0,
+    accumulator = 0.0, frames = 0, physics_ticks = 0, sim_ticks = 0,
+    fps_time = 0.0, fps_frames = 0, fps = 0,
+    width = 1280, height = 720, render_width = 640, render_height = 360,
+    pixel_scale = 2, light_mode = 0, selected = 4, brush = 0,
+    locked = false, mouse_known = false, mouse_x = 0.0, mouse_y = 0.0,
+    warp_pending = false, warp_x = 0.0, warp_y = 0.0,
+    look_x = 0.0, look_y = 0.0, pending_x = 0.0, pending_y = 0.0,
+    forward = false, backward = false, left = false, right = false,
+    jump = false, sprint = false, descend = false, flying = false,
+    mine = false, place = false, paused = false, reset = false,
+    held_f = false, held_p = false, held_l = false, held_o = false, held_r = false,
+}
+
+local function resource(binding, buffer)
+    return { binding = binding, resource = wgpu.BindingResource.Buffer({ buffer = buffer, offset = 0 }) }
+end
+local function compute_pipeline(device, shader, entry)
+    return device:create_compute_pipeline({
+        label = entry, layout = nil, module = shader, entry_point = entry,
+        compilation_options = wgpu.PipelineCompilationOptions.default(),
+    })
+end
+
+function app:update_resolution()
+    local divisor = math.max(self.pixel_scale, self.width / 1280, self.height / 720)
+    self.render_width = math.max(1, math.floor(self.width / divisor))
+    self.render_height = math.max(1, math.floor(self.height / divisor))
+end
+function app:set_lock(locked)
+    local window = self.window
+    if window == nil then return end
+    self.locked = locked
+    self.mouse_known = false
+    self.warp_pending = false
+    self.look_x = 0 self.look_y = 0
+    self.pending_x = 0 self.pending_y = 0
+    window:set_cursor_visible(not locked)
+    if locked then
+        window:set_cursor_grab(winit.window.CursorGrabMode.Confined)
+    else
+        window:set_cursor_grab(winit.window.CursorGrabMode.None)
+        self.mine = false self.place = false
+    end
+end
+-- Cursor position only. Mouse look uses raw motion (app:device_event): while
+-- the cursor is hidden and confined, Windows stops sending reliable CursorMoved.
+function app:mouse_motion(x: number, y: number)
+    self.mouse_x = x self.mouse_y = y self.mouse_known = true
+end
+function app:configure()
+    local window = self.window
+    local gpu = self.gpu
+    if window == nil or gpu == nil then return end
+    local size = window:inner_size()
+    if size.width == 0 or size.height == 0 then return end
+    self.width = size.width self.height = size.height
+    self:update_resolution()
+    gpu.config.width = size.width gpu.config.height = size.height
+    gpu.surface:configure(gpu.device, gpu.config)
+    window:request_redraw()
+end
+function app:build_hud()
+    text.begin()
+    text.drawText(14, 10, "EVI / PIXEL FRONTIER", 114, 233, 217, 2)
+    text.drawText(16, 43, string.format("%d FPS  |  %dx%d  |  192x96x192", self.fps, self.render_width, self.render_height), 204, 221, 236, 1)
+    text.drawText(16, 60, "60Hz PLAYER / 20Hz MATERIALS / 170m VIEW", 128, 164, 187, 1)
+    local start = math.max(8, math.floor(self.width / 2 - 244))
+    local bottom = math.max(90, self.height - 72)
+    for i = 1, 10 do
+        local number = i
+        if i == 10 then number = 0 end
+        local caption = string.format(" %d ", number)
+        if i == self.selected then caption = string.format("[%d]", number) end
+        text.drawText(start + (i - 1) * 48, bottom, caption, assert(palette_r[i]), assert(palette_g[i]), assert(palette_b[i]), 1)
+    end
+    local state = "WALK"
+    if self.flying then state = "FLY" end
+    local simulation = "LIVE"
+    if self.paused then simulation = "PAUSED" end
+    text.drawText(start, bottom + 22, string.format("%s  /  %s  /  %s  /  BRUSH %d", assert(material_names[self.selected]), state, simulation, self.brush * 2 + 1), 227, 235, 242, 1)
+    text.drawText(start, bottom + 42, "F FLY  P PAUSE  L LIGHT  O PIXELS  +/- BRUSH", 145, 173, 190, 1)
+    if not self.locked then
+        text.drawText(math.max(10, math.floor(self.width / 2 - 120)), math.floor(self.height / 2 + 22), "CLICK TO CAPTURE / ESC TO EXIT", 255, 223, 142, 1)
+    end
+end
+function app:control_bytes(now)
+    local keys = 0
+    if self.forward then keys += 1 end
+    if self.backward then keys += 2 end
+    if self.left then keys += 4 end
+    if self.right then keys += 8 end
+    if self.jump then keys += 16 end
+    if self.sprint then keys += 32 end
+    if self.flying then keys += 64 end
+    if self.descend then keys += 128 end
+    local actions = 0
+    if self.locked and self.mine then actions += 1 end
+    if self.locked and self.place then actions += 2 end
+    local pause = 0
+    if self.paused then pause = 1 end
+    local dx = math.floor(self.pending_x)
+    local dy = math.floor(self.pending_y)
+    return u32(self.width) .. u32(self.height) .. u32(self.render_width) .. u32(self.render_height)
+        .. u32(self.frames + 1) .. u32(self.sim_ticks) .. u32(keys) .. u32(dx)
+        .. u32(dy) .. u32(actions) .. u32(self.selected) .. u32(pause)
+        .. u32(text.count) .. u32(math.floor(now * 1000)) .. u32(self.brush) .. u32(self.light_mode)
+end
+
+function app:redraw()
+    local window = self.window
+    local gpu = self.gpu
+    local clock = self.clock
+    if window == nil or gpu == nil or clock == nil then return end
+    local size = window:inner_size()
+    if size.width == 0 or size.height == 0 then return end
+    local now = clock:elapsed():as_secs_f64()
+    local raw_dt = math.max(0, now - self.previous_time)
+    local dt = math.min(0.10, raw_dt)
+    self.previous_time = now
+    self.accumulator = math.min(self.accumulator + dt, PLAYER_DT * MAX_CATCHUP)
+    self.fps_time += raw_dt self.fps_frames += 1
+    if self.fps_time >= 0.5 then
+        self.fps = math.floor(self.fps_frames / self.fps_time + 0.5)
+        self.fps_time = 0 self.fps_frames = 0
+    end
+    self.pending_x += self.look_x self.pending_y += self.look_y
+    self.look_x = 0 self.look_y = 0
+    local steps = math.min(MAX_CATCHUP, math.floor(self.accumulator / PLAYER_DT))
+    self:build_hud()
+    gpu.queue:write_buffer(gpu.controls, 0, self:control_bytes(now))
+    if text.count > 0 then gpu.queue:write_buffer(gpu.glyphs, 0, text.bytes) end
+    local current = gpu.surface:get_current_texture()
+    if current.Timeout or current.Occluded then window:request_redraw() return end
+    if current.Outdated or current.Lost then self:configure() return end
+    if current.Validation then error("voxel surface validation error") end
+    local frame = current.Success or current.Suboptimal
+    if frame == nil then window:request_redraw() return end
+    local encoder = gpu.device:create_command_encoder({ label = "PIXEL FRONTIER frame" })
+    if self.reset then
+        do
+            local pass <close> = encoder:begin_compute_pass({ label = "regenerate terrain" })
+            pass:set_pipeline(gpu.generate)
+            pass:set_bind_group(0, gpu.generate_group, {})
+            pass:dispatch_workgroups(24, 24, 24)
+        end
+        gpu.active = 2
+        self.physics_ticks = 0 self.sim_ticks = 0
+        self.reset = false
+    end
+    for _ = 1, steps do
+        do
+            local pass <close> = encoder:begin_compute_pass({ label = "60Hz player" })
+            pass:set_pipeline(gpu.player)
+            pass:set_bind_group(0, assert(gpu.player_groups[gpu.active]), {})
+            pass:dispatch_workgroups(1, 1, 1)
+        end
+        self.physics_ticks += 1
+        if self.physics_ticks % 3 == 0 then
+            do
+                local pass <close> = encoder:begin_compute_pass({ label = "20Hz sand liquids acid" })
+                pass:set_pipeline(gpu.simulate)
+                pass:set_bind_group(0, assert(gpu.world_groups[gpu.active]), {})
+                pass:dispatch_workgroups(24, 24, 24)
+            end
+            gpu.active = 3 - gpu.active
+            self.sim_ticks += 1
+        end
+        self.accumulator -= PLAYER_DT
+    end
+    if steps > 0 then
+        self.pending_x = self.pending_x - math.floor(self.pending_x)
+        self.pending_y = self.pending_y - math.floor(self.pending_y)
+    end
+    do
+        local pass <close> = encoder:begin_compute_pass({ label = "pixel voxel raycaster" })
+        pass:set_pipeline(gpu.trace)
+        pass:set_bind_group(0, assert(gpu.trace_groups[gpu.active]), {})
+        pass:dispatch_workgroups(math.floor((self.render_width + 7) / 8), math.floor((self.render_height + 7) / 8), 1)
+    end
+    local view = frame.texture:create_view(wgpu.TextureViewDescriptor.default())
+    do
+        local pass <close> = encoder:begin_render_pass({
+            label = "nearest pixels and ORIGINAL bitmap font",
+            color_attachments = { { view = view, ops = {
+                load = wgpu.LoadOp.Clear({ r = 0, g = 0, b = 0, a = 1 }), store = wgpu.StoreOp.Store,
+            } } },
+        })
+        pass:set_pipeline(gpu.present)
+        pass:set_bind_group(0, gpu.present_group, {})
+        pass:draw_indirect(gpu.draw_args, 0)
+    end
+    gpu.queue:submit({ encoder:finish() })
+    gpu.queue:present(frame)
+    self.frames += 1
+    window:request_redraw()
+end
+
+function app:resumed(event_loop)
+    if self.window ~= nil then return end
+    local attrs = winit.window.Window.default_attributes()
+        :with_title("EVI / PIXEL FRONTIER - original bitmap font")
+        :with_inner_size(winit.dpi.LogicalSize.new(1280, 720))
+    local window = event_loop:create_window(attrs)
+    self.window = window
+    self.clock = std.time.Instant.now()
+    task.spawn(function()
+        local instance = wgpu.Instance.default()
+        local surface = instance:create_surface(window)
+        local options = wgpu.RequestAdapterOptions.default()
+        options.compatible_surface = surface
+        local adapter = await(instance:request_adapter(options))
+        local device, queue = await(adapter:request_device(wgpu.DeviceDescriptor.default()))
+        local size = window:inner_size()
+        local config = assert(surface:get_default_config(adapter, math.max(1, size.width), math.max(1, size.height)), "unsupported surface")
+        local writable_storage = wgpu.BufferUsages.STORAGE:union(wgpu.BufferUsages.COPY_DST)
+        local controls = device:create_buffer({ label = "64-byte input packet", size = 64,
+            usage = wgpu.BufferUsages.UNIFORM:union(wgpu.BufferUsages.COPY_DST), mapped_at_creation = false })
+        local worlds = {
+            device:create_buffer({ label = "voxels A", size = WORLD_BYTES, usage = wgpu.BufferUsages.STORAGE, mapped_at_creation = false }),
+            device:create_buffer({ label = "voxels B", size = WORLD_BYTES, usage = wgpu.BufferUsages.STORAGE, mapped_at_creation = false }),
+        }
+        local camera = device:create_buffer_init({ label = "GPU player camera", contents = zero_bytes(80), usage = writable_storage })
+        local image = device:create_buffer({ label = "nearest-neighbour pixel framebuffer", size = IMAGE_BYTES,
+            usage = wgpu.BufferUsages.STORAGE, mapped_at_creation = false })
+        local glyphs = device:create_buffer({ label = "old text engine glyph commands", size = 1024 * 16,
+            usage = writable_storage, mapped_at_creation = false })
+        local font = text.loadFont(device, std.env.current_dir():join("font.bin"))
+        local draw_args = device:create_buffer_init({ label = "fullscreen draw arguments",
+            contents = "\003\000\000\000\001\000\000\000\000\000\000\000\000\000\000\000", usage = wgpu.BufferUsages.INDIRECT })
+        local world_shader = device:create_shader_module({ label = "GPU voxel simulation", source = wgpu.ShaderSource.Wgsl(WORLD_SHADER) })
+        local trace_shader = device:create_shader_module({ label = "GPU textured voxel raycaster", source = wgpu.ShaderSource.Wgsl(TRACE_SHADER) })
+        local present_shader = device:create_shader_module({ label = "ported libraries.text", source = wgpu.ShaderSource.Wgsl(PRESENT_SHADER) })
+        -- Infer layouts per entry point; no struct-like binding-type variants.
+        -- Auto layouts belong to their pipeline, so player/generator/simulator
+        -- deliberately have separate groups even when they share buffers.
+        local generate = compute_pipeline(device, world_shader, "generate")
+        local player = compute_pipeline(device, world_shader, "player")
+        local simulate = compute_pipeline(device, world_shader, "simulate")
+        local trace = compute_pipeline(device, trace_shader, "render")
+        local present = device:create_render_pipeline({ label = "pixel presentation", layout = nil,
+            vertex = { module = present_shader, entry_point = "vs", buffers = {}, compilation_options = wgpu.PipelineCompilationOptions.default() },
+            fragment = { module = present_shader, entry_point = "fs", compilation_options = wgpu.PipelineCompilationOptions.default(),
+                targets = { { format = config.format, write_mask = wgpu.ColorWrites.ALL } } },
+            primitive = wgpu.PrimitiveState.default(), multisample = wgpu.MultisampleState.default(),
+        })
+        local generate_group = device:create_bind_group({
+            label = "terrain generator", layout = generate:get_bind_group_layout(0), entries = {
+                resource(1, assert(worlds[2])), resource(3, camera),
+            },
+        })
+        local world_groups = {}
+        local player_groups = {}
+        local trace_groups = {}
+        for i = 1, 2 do
+            local current_world = assert(worlds[i])
+            local next_world = assert(worlds[3 - i])
+            world_groups[i] = device:create_bind_group({ label = "world ping pong", layout = simulate:get_bind_group_layout(0), entries = {
+                resource(0, current_world), resource(1, next_world), resource(2, controls), resource(3, camera),
+            } })
+            player_groups[i] = device:create_bind_group({ label = "player collision and camera", layout = player:get_bind_group_layout(0), entries = {
+                resource(0, current_world), resource(2, controls), resource(3, camera),
+            } })
+            trace_groups[i] = device:create_bind_group({ label = "current world raycast", layout = trace:get_bind_group_layout(0), entries = {
+                resource(0, current_world), resource(1, controls), resource(2, camera), resource(3, image),
+            } })
+        end
+        local present_group = device:create_bind_group({ label = "original bitmap font and pixels", layout = present:get_bind_group_layout(0), entries = {
+            resource(0, controls), resource(1, image), resource(2, font), resource(3, glyphs),
+        } })
+        self.gpu = {
+            instance = instance, surface = surface, device = device, queue = queue, config = config,
+            controls = controls, camera = camera, image = image, glyphs = glyphs, font = font,
+            worlds = worlds, world_groups = world_groups, trace_groups = trace_groups,
+            player_groups = player_groups, generate_group = generate_group,
+            present_group = present_group, present = present, draw_args = draw_args,
+            generate = generate, player = player, simulate = simulate, trace = trace, active = 2,
+        }
+        print("PIXEL FRONTIER GPU:", adapter:get_info().name)
+        print("3,538,944 voxels; 60 Hz player / 20 Hz materials; font.bin uses the original bitmap format.")
+        self.reset = true
+        self:configure()
+    end)
+end
+function app:user_event(_event_loop, _event)
+    task.run_ready()
+end
+-- Mouse look: raw device motion keeps arriving while the cursor is hidden and
+-- confined, and needs no recentring.
+function app:device_event(_event_loop, _device_id, event)
+    local motion = event.MouseMotion
+    if motion and self.locked then
+        self.look_x += motion.delta._1
+        self.look_y += motion.delta._2
+    end
+end
+function app:window_event(event_loop, _id, event)
+    if event.CloseRequested then
+        event_loop:exit()
+    elseif event.Resized then
+        self:configure()
+    elseif event.ScaleFactorChanged then
+        self:configure()
+    elseif event.RedrawRequested then
+        self:redraw()
+    elseif event.CursorMoved then
+        local moved = event.CursorMoved
+        if moved then
+            self:mouse_motion(moved.position.x, moved.position.y)
+        end
+    elseif event.MouseInput then
+        local click = event.MouseInput
+        if click then
+            local pressed = false
+            if click.state.Pressed then pressed = true end
+            if pressed and not self.locked then
+                self:set_lock(true)
+            else
+                if click.button.Left then self.mine = pressed end
+                if click.button.Right then self.place = pressed end
+            end
+        end
+    elseif event.KeyboardInput then
+        local input = event.KeyboardInput
+        if input then
+            local pressed = false
+            if input.event.state.Pressed then pressed = true end
+            local named = input.event.logical_key.Named
+            if pressed then
+                if named then
+                    if named.Escape then
+                        if self.locked then self:set_lock(false) else event_loop:exit() end
+                        return
+                    end
+                end
+            end
+            local code = input.event.physical_key.Code
+            if code then
+                if code.KeyW then self.forward = pressed
+                elseif code.KeyS then self.backward = pressed
+                elseif code.KeyA then self.left = pressed
+                elseif code.KeyD then self.right = pressed
+                elseif code.Space then self.jump = pressed
+                elseif code.ShiftLeft then self.sprint = pressed
+                elseif code.ShiftRight then self.sprint = pressed
+                elseif code.ControlLeft then self.descend = pressed
+                elseif code.ControlRight then self.descend = pressed
+                elseif code.KeyF then
+                    if pressed and not self.held_f then self.flying = not self.flying end
+                    self.held_f = pressed
+                elseif code.KeyP then
+                    if pressed and not self.held_p then self.paused = not self.paused end
+                    self.held_p = pressed
+                elseif code.KeyL then
+                    if pressed and not self.held_l then self.light_mode = (self.light_mode + 1) % 3 end
+                    self.held_l = pressed
+                elseif code.KeyO then
+                    if pressed and not self.held_o then self.pixel_scale = self.pixel_scale % 3 + 1 self:update_resolution() end
+                    self.held_o = pressed
+                elseif code.KeyR then
+                    if pressed and not self.held_r then self.reset = true end
+                    self.held_r = pressed
+                elseif pressed then
+                    if code.Digit1 then self.selected = 1 elseif code.Digit2 then self.selected = 2
+                    elseif code.Digit3 then self.selected = 3 elseif code.Digit4 then self.selected = 4
+                    elseif code.Digit5 then self.selected = 5 elseif code.Digit6 then self.selected = 6
+                    elseif code.Digit7 then self.selected = 7 elseif code.Digit8 then self.selected = 8
+                    elseif code.Digit9 then self.selected = 9 elseif code.Digit0 then self.selected = 10
+                    elseif code.Minus then self.brush = math.max(0, self.brush - 1)
+                    elseif code.Equal then self.brush = math.min(2, self.brush + 1) end
+                end
+            end
+        end
+    end
+end
+function app:exiting(_event_loop)
+    print(string.format("PIXEL FRONTIER: %d frames / %d physics ticks / %d material ticks", self.frames, self.physics_ticks, self.sim_ticks))
+    self.gpu = nil self.window = nil self.clock = nil
+    collectgarbage("collect")
+end
+local event_loop = winit.event_loop.EventLoop.new()
+task.wake_through(event_loop:create_proxy())
+event_loop:run_app(app)

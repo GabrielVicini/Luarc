@@ -1,0 +1,82 @@
+-- Closures: per-iteration captures in every loop form, shared upvalues, nesting.
+local fns: { () -> number } = {}
+for _, v in ipairs({10, 20, 30}) do
+  table.insert(fns, function() return v end)
+end
+print(fns[1](), fns[2](), fns[3]())
+
+fns = {}
+local n = 0
+while n < 3 do
+  n += 1
+  local m = n * 2
+  table.insert(fns, function() return m end)
+end
+print(fns[1](), fns[2](), fns[3]())
+
+fns = {}
+local k = 0
+repeat
+  k += 1
+  local c = k + 100
+  table.insert(fns, function() return c end)
+until c >= 103
+print(fns[1](), fns[2](), fns[3]())
+
+-- the loop variable is fresh per iteration even when the body assigns it
+fns = {}
+for i = 1, 3 do
+  i = i * 7
+  table.insert(fns, function() return i end)
+end
+print(fns[1](), fns[2](), fns[3]())
+
+-- continue inside a loop that captures
+fns = {}
+for i = 1, 6 do
+  if i % 2 == 0 then continue end
+  table.insert(fns, function() return i end)
+end
+print(#fns, fns[1](), fns[2](), fns[3]())
+
+-- two closures share one upvalue; writes are visible to both
+local count = 0
+local function inc() count += 1 return count end
+local function get() return count end
+inc() inc()
+print(get(), count)
+count = 40
+print(inc(), get())
+
+-- nested closures capturing an outer local and a parameter
+local function adder(a: number): (number) -> (number) -> number
+  return function(b: number)
+    return function(c: number) return a + b + c end
+  end
+end
+print(adder(1)(2)(3), adder(10)(20)(30))
+
+-- a counter factory: each call gets its own state
+local function counter(): () -> number
+  local x = 0
+  return function() x += 1 return x end
+end
+local c1, c2 = counter(), counter()
+c1() c1()
+print(c1(), c2())
+
+-- recursion through a captured local function
+local function fib(x: number): number
+  if x < 2 then return x end
+  return fib(x - 1) + fib(x - 2)
+end
+print(fib(15))
+
+-- captured locals of a block that ends early via break
+fns = {}
+for i = 1, 10 do
+  local sq = i * i
+  table.insert(fns, function() return sq end)
+  if i == 3 then break end
+end
+print(#fns, fns[3]())

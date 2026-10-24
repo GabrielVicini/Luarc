@@ -1,0 +1,3 @@
+local function f() return f end
+print(f() == f)
+-- expect-error: 1:16: recursive type expansion is not supported; use a record to break the cycle

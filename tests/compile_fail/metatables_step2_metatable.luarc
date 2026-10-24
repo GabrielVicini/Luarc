@@ -1,0 +1,2 @@
+setmetatable({}, 1)
+-- expect-error: 1:1: setmetatable requires a statically known record as its second argument

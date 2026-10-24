@@ -1,0 +1,25 @@
+local function make()
+ return function() return 42 end
+end
+local ok,method=xpcall(make,function(err)return err end)
+local t=setmetatable({}, {__call=method,__metatable=false})
+print(ok,t())
+local function use(value:any)
+ local object=setmetatable({}, {__call=value,__metatable=false})
+ return (object())
+end
+local ok,result=xpcall(use,function(err)return err end,function()return 55 end)
+print(ok,result)
+local ok,method=xpcall(function()error("body",0)end,function()return function()return 77 end end)
+local object=setmetatable({}, {__call=method,__metatable=false})
+print(ok,object())
+local function maybe(choose:boolean)
+ local fn=nil
+ if choose then fn=function()return 88 end end
+ return fn
+end
+local ok,method=xpcall(maybe,function(err)return err end,false)
+print(ok,type(method))
+local ok,method=xpcall(maybe,function(err)return err end,true)
+local object=setmetatable({}, {__call=method,__metatable=false})
+print(ok,object())

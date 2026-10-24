@@ -1,0 +1,7 @@
+local C = {}
+C.__index = C
+local child = setmetatable({}, C)
+local function same(t) return t end
+same(C)
+same(child)
+-- expect-error: 6:6: cyclic static record parent types are not supported

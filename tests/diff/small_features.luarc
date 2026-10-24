@@ -1,0 +1,94 @@
+-- tonumber(s, base), math.frexp/modf/ldexp/lerp/random/randomseed (roadmap S items).
+
+-- tonumber with a base: strtoull rules
+print(tonumber("10", 2), tonumber("ff", 16), tonumber("FF", 16), tonumber("zz", 36), tonumber("Z", 36))
+print(tonumber("777", 8), tonumber("8", 8), tonumber("12", 2), tonumber("z", 35))
+print(tonumber("", 2), tonumber(" ", 16), tonumber("+", 16), tonumber("-", 16), tonumber("- 1", 16))
+print(tonumber("+10", 2), tonumber("\t\v\f 1010 \n", 2), tonumber("1 x", 2), tonumber("1x", 2))
+print(tonumber("0x1f", 16), tonumber("0X1F", 16), tonumber("0x", 16), tonumber("0xg", 16), tonumber("0x1f", 15))
+print(tonumber("10\0", 2), tonumber("\0", 2), tonumber("-0", 16), tonumber("1.5", 16))
+print(tonumber("-1", 16) == 2^64, tonumber("-ffffffffffffffff", 16), tonumber("-7f", 16) == 2^64 - 127)
+print(tonumber("ffffffffffffffffffff", 16) == 2^64, tonumber("1fffffffffffff", 16), tonumber("7fffffffffffffff", 16) == 2^63)
+-- base 10 is the ordinary conversion (floats, hex, inf)
+print(tonumber("1.5", 10), tonumber("1e1", 10), tonumber("0x1p4", 10), tonumber("inf", 10), tonumber(" 12 ", 10), tonumber("1 2", 10))
+-- the base truncates; out of range is an error
+print(tonumber("11", 2.9), tonumber("11", 10.5), tonumber("11", 36.99))
+print(pcall(function() return tonumber("1", 1) end))
+print(pcall(function() return tonumber("1", 37) end))
+print(pcall(function() return tonumber("1", -2) end))
+print(pcall(function() return tonumber("1", 0/0) end))
+local base = 16
+local s = "beef"
+print(tonumber(s, base), tonumber(s:upper(), base))
+
+-- frexp / modf
+local m, e = math.frexp(8)
+print(m, e)
+print(math.frexp(-3))
+print(math.frexp(0))
+print(math.frexp(-0))
+print(math.frexp(1))
+print(math.frexp(0.1))
+print(math.frexp(5e-324))
+print(math.frexp(2.2250738585072014e-308))
+print(math.frexp(1.7976931348623157e308))
+print(math.frexp(1/0))
+print(math.frexp(-1/0))
+print(math.frexp(0/0))
+print(math.modf(3.7))
+print(math.modf(-3.7))
+print(math.modf(5))
+print(math.modf(-0.5))
+print(math.modf(-0))
+print(math.modf(1/0))
+print(math.modf(-1/0))
+print(math.modf(0/0))
+print(math.modf(1e300))
+
+-- ldexp: correctly rounded, exponent truncates like luaL_checkinteger
+print(math.ldexp(0.5, 4), math.ldexp(1, 1024), math.ldexp(1, 1023), math.ldexp(-1, 1024))
+print(math.ldexp(1, -1074), math.ldexp(1, -1075), math.ldexp(1.5, -1074), math.ldexp(2.5, -1075), math.ldexp(3, -1075))
+print(math.ldexp(3, 2.7), math.ldexp(1, -2.7), math.ldexp(0/0, 3), math.ldexp(1/0, -5000), math.ldexp(0, 5000))
+print(math.ldexp(1, 1e10), math.ldexp(1, -1e10), math.ldexp(5e-324, 2000), math.ldexp(1e308, -2000))
+local fm, fe = math.frexp(123.456)
+print(math.ldexp(fm, fe) == 123.456, math.ldexp(0.75, -1022))
+
+-- lerp
+print(math.lerp(1, 3, 0.5), math.lerp(1, 3, 1), math.lerp(1, 3, 0), math.lerp(1, 3, 2), math.lerp(0, 1e308, 2))
+print(math.lerp(1, 2, 0/0), math.lerp(-0, 0, 0), math.lerp(0.1, 0.7, 1))
+
+-- random: Luau's PCG32, so seeded sequences match the reference
+math.randomseed(42)
+print(math.random(1, 100), math.random(1, 100), math.random(10), math.random())
+math.randomseed(-5)
+print(math.random(1, 1000000), math.random(-10, 10), math.random(3.9))
+math.randomseed(1.9)
+print(math.random(100))
+math.randomseed(1e10)
+print(math.random(100))
+math.randomseed(0)
+local sum = 0
+for _ = 1, 1000 do
+    local r = math.random(6)
+    assert(r >= 1 and r <= 6 and r == math.floor(r))
+    sum += r
+end
+print(sum)
+for _ = 1, 1000 do
+    local f = math.random()
+    assert(f >= 0 and f < 1)
+end
+print(math.random(5, 5), math.random(-0.5, 0.5), math.random(-2147483648, 2147483646) ~= nil)
+print(math.random(2147483647, 2147483647), math.random(-2147483648, -2147483648))
+print(pcall(function() return math.random(5, 1) end))
+print(pcall(function() return math.random(0) end))
+print(pcall(function() return math.random(-2147483648, 2147483647) end))
+print(pcall(function() return math.random(1, 1e10) end))
+local r = math.random
+math.randomseed(7)
+local a1 = r(1000)
+math.randomseed(7)
+print(a1 == math.random(1000))
+
+-- a NUL byte ends the string, as in the reference's C conversion
+print(tonumber("10\0"), tonumber("1\0 "), tonumber("\0"), tonumber(" 2\0x"), tonumber("10\0", 10), tonumber("0x1\0", 16))

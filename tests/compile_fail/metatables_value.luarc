@@ -1,0 +1,3 @@
+local function take(f) return f end
+local x = take(setmetatable)
+-- expect-error: 2:16: 'setmetatable' cannot be used as a function value (call it directly)

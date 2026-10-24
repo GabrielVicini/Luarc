@@ -1,0 +1,59 @@
+-- Ownership contracts: a call that fails never consumes any
+-- of its arguments; an array of objects is consumed all-or-nothing.
+local fx = require("rust:fixture")
+
+local function live(n): string
+  local ok = pcall(function() return n:len() end)
+  return if ok then "live" else "consumed"
+end
+
+local a = fx.Notes.new()
+a:push("x")
+local b = fx.Notes.new()
+b:push("y")
+b:push("z")
+
+-- the same object twice in one consumed array: rejected before any take
+local ok, err = pcall(function() return fx.seal_all({a, a}) end)
+print("dup", ok, live(a))
+
+-- a consumed element: nothing else in the array is taken
+local gone = fx.Notes.new()
+print("seal gone", fx.seal_all({gone}), live(gone))
+ok, err = pcall(function() return fx.seal_all({a, gone}) end)
+print("partial", ok, live(a))
+
+-- array + another consumed argument that cannot be consumed
+ok, err = pcall(function() return fx.seal_with({a}, gone) end)
+print("with", ok, live(a))
+-- the array element and the extra argument are the same object
+ok, err = pcall(function() return fx.seal_with({a}, a) end)
+print("same", ok, live(a))
+
+print("sealed", fx.seal_with({a}, b), live(a), live(b))
+
+-- shared (Arc) objects: by value only while no native object shares them
+local beacon = fx.Beacon.new(7)
+beacon:hit()
+local tower = fx.Tower.new()
+tower:watch(beacon)
+ok, err = pcall(function() return fx.retire(beacon) end)
+print("retire shared", ok, beacon:id(), beacon:hits())
+local n = fx.Notes.new()
+ok, err = pcall(function() return fx.retire_with(beacon, n) end)
+print("retire_with shared", ok, beacon:hits(), live(n))
+tower:release()
+print("retire", fx.retire(beacon))
+print("after", pcall(function() return beacon:hits() end))
+
+-- an array of shared objects: refused while any element is still shared, and
+-- then nothing is taken
+local b1, b2 = fx.Beacon.new(1), fx.Beacon.new(2)
+b1:hit()
+b2:hit()
+local t2 = fx.Tower.new()
+t2:watch(b2)
+ok, err = pcall(function() return fx.retire_all({b1, b2}) end)
+print("retire_all shared", ok, b1:hits(), b2:hits())
+t2:release()
+print("retire_all", fx.retire_all({b1, b2}))

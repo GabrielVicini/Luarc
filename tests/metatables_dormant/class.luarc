@@ -1,0 +1,15 @@
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+function Class:get() return self.x end
+
+local obj = Class.new(7)
+print("class", obj:get(), obj.get(obj), Class.__index == Class)
+local function read_x(t) return t.x end
+local plain = {x = 9}
+local plain_alias = plain
+local isolated = {x = 11}
+print("shared", read_x(obj), read_x(plain), read_x(plain_alias), isolated.x)
+print("plain-method", plain.get == nil)
+plain.x = 10
+print("plain-alias", read_x(plain_alias), obj:get())

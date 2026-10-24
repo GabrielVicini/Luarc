@@ -1,0 +1,2 @@
+local child = setmetatable({}, {__index = {}, __add = 1})
+-- expect-error: 1:28: metamethod '__add' is not supported in this step

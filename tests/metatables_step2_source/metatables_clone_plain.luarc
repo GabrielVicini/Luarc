@@ -1,0 +1,7 @@
+local C = {}
+C.__index = C
+local function read(t) return t.x end
+local child = setmetatable({x = 1}, C)
+local plain = {x = 2}
+print(read(child), read(plain))
+local copy = table.clone(plain)

@@ -1,0 +1,2 @@
+local x: number = nil
+-- expect-error: 1:7: nil is not allowed here

@@ -1,0 +1,12 @@
+# Machine-readable pin of the toolchain luarc uses to extract Rust API models
+# (rustdoc JSON). Programs are always built with the stable toolchain on PATH;
+# this nightly is invoked explicitly (`cargo +<toolchain> doc`) and never
+# changes the user's default toolchain.
+#
+# Install:  rustup toolchain install nightly-2026-08-06 --component rust-docs-json
+# Override the rustup toolchain name with LUARC_NIGHTLY=<name>; its
+# `rustc --version` must still equal `rustc` below.
+[extraction]
+toolchain = "nightly-2026-08-06"
+rustc = "rustc 1.99.0-nightly (7608eb7b0 2026-08-05)"
+format_version = 61

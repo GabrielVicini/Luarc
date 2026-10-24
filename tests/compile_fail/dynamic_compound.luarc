@@ -1,0 +1,3 @@
+local a: any = 1
+a += 1
+-- expect-error: 2:1: '+=' on an 'any' value is not supported; write `x = x + y` instead

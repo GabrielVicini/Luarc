@@ -1,0 +1,5 @@
+local C = {}
+C.__in_ex = C
+C["_dindex"] = C
+print(C.__in_ex == C, C["_dindex"] == C)
+-- expect-error: 1:11: recursive type expansion is not supported; use a record to break the cycle

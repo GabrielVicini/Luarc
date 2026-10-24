@@ -1,0 +1,2 @@
+local function f() return setmetatable end
+-- expect-error: 1:27: 'setmetatable' cannot be used as a function value (call it directly)

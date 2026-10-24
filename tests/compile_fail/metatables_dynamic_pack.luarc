@@ -1,0 +1,5 @@
+local C = {}
+C.__index = C
+local function f(...: number) setmetatable({}, C, ...) end
+f(1)
+-- expect-error: 3:51: '...' cannot be used here: its number of values is only known at run time (it can end the arguments of a function call or print, end a table constructor or a return, or be assigned to a fixed number of variables)

@@ -1,0 +1,13 @@
+--!optimize 18446744073709551616
+-- These layouts are identical at all three oracle optimization levels.
+local t = {"a", "b", "c"}
+local ok = pcall(function() next(t, 4) end)
+print("list", ok)
+local function record_case()
+local record = setmetatable({a=nil, b=2, c=3}, {__tostring=function(): string return "record" end})
+print("record", pcall(function() next(record, "a") end))
+end
+record_case()
+local dense = {}
+dense[1]="a"; dense[2]="b"; dense[3]="c"
+print("unobserved", #dense)

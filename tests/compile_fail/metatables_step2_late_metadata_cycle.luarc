@@ -1,0 +1,7 @@
+local mt = {}
+local child = setmetatable({}, mt)
+local a, b = {nested = mt}, {nested = child}
+local function same(t) end
+same(a)
+same(b)
+-- expect-error: 6:6: cyclic static metatable type expansion is not supported

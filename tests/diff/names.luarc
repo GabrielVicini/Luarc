@@ -1,0 +1,21 @@
+-- Identifiers that resemble generated names must not collide.
+local _n = 1
+local n = 2
+print(_n)
+local __x = 3
+local v___x = 4
+print(__x, v___x)
+local self_ = 5
+local obj = {v = 6}
+function obj:get() return self.v + self_ end
+print(obj:get())
+local f_g_1 = 7
+local function g() return 8 end
+print(g(), f_g_1)
+local _ = 9
+local lr = 10
+local Some = 11
+local None = 12
+print(lr, Some, None)
+local type = "t"
+print(type)

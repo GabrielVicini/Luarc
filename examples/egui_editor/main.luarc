@@ -1,0 +1,85 @@
+-- UI policy and application state live in Luarc. The local Rust crate bridges
+-- egui's editable text buffer and OS worker threads; it never executes Lua.
+local host = require("rust:editor_host")
+
+local app = {
+    checked = "\0",
+    submitted = "",
+    last_check = -2,
+    pending_run = false,
+    ignored = "",
+}
+
+function app:tick(editor)
+    local now = editor:seconds()
+    local source = editor:source()
+    if editor:poll() then
+        local kind = editor:result_kind()
+        local success = editor:result_ok()
+        local text = editor:result_text()
+        if kind == "check" then
+            -- Never put diagnostics from an older snapshot on new source.
+            if source == self.submitted then
+                self.checked = source
+                editor:diagnostics(text)
+                local missing = string.match(text, "crate '([%w_%-]+)' is not a dependency")
+                if missing and missing ~= self.ignored then editor:offer_package(missing) end
+                if success then editor:status("Ready · no errors")
+                else editor:status("Check failed · see highlighted lines") end
+            end
+        elseif kind == "uninstall" then
+            editor:output(text)
+            if success then
+                editor:status("Package uninstalled · checking again")
+                self.checked = "\0"
+                self.last_check = -2
+            else
+                editor:status("Uninstall failed · see output")
+            end
+        elseif kind == "install" then
+            editor:output(text)
+            if success then
+                editor:status("Package installed · checking again")
+                self.checked = "\0"
+                self.last_check = -2
+            else
+                editor:status("Installation failed · see output; retry with Install")
+                editor:offer_package(editor:installing_package())
+            end
+        else
+            editor:output(text)
+            if success then editor:status("Run finished")
+            else editor:status("Build or run failed · see output") end
+        end
+    end
+
+    local action = editor:action()
+    if action == "run" then self.pending_run = true end
+    if action == "dismiss" then self.ignored = editor:package() end
+    if action == "uninstall" and not editor:busy() then
+        self.pending_run = false
+        self.ignored = editor:package()
+        editor:start_uninstall(editor:package())
+        editor:status("Uninstalling package…")
+    end
+    if action == "install" and not editor:busy() then
+        self.pending_run = false
+        editor:start_install(editor:package())
+        editor:status("Installing package…")
+    end
+    if source ~= self.checked then editor:clear_diagnostics() end
+    if not editor:busy() then
+        if self.pending_run then
+            self.pending_run = false
+            editor:start_run()
+            editor:status("Compiling and running…")
+        elseif source ~= self.checked and now - self.last_check >= 1.5 then
+            self.submitted = source
+            self.last_check = now
+            editor:start_check()
+            editor:status("Checking in background…")
+        end
+    end
+end
+
+host.run(app)

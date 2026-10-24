@@ -1,0 +1,31 @@
+-- A pattern not known at compile time whose captures the call site would lose
+-- is a run-time error, never a shorter result list.
+local function dyn(): string
+    return "(%w+)=(%w+)"
+end
+local function pos(): string
+    return "()b"
+end
+print(pcall(function()
+    local a, b = string.match("key=val", dyn())
+    return a or "", b or ""
+end))
+print(pcall(function()
+    local a, b, c = string.find("key=val", dyn())
+    return c or ""
+end))
+print(pcall(function()
+    local v = string.match("abc", pos())
+    return v or ""
+end))
+print(pcall(function()
+    local s = "key=val"
+    local a, b = s:match(dyn())
+    return a or "", b or ""
+end))
+-- the same calls are fine when the site keeps only the fixed values
+local v = string.match("key=val", dyn())
+local i, j = string.find("abc", pos())
+print(v, i, j)
+-- and a plain find never has captures
+print(string.find("xyz", pos(), 1, true) == nil, string.find("a()b", pos(), 1, true))

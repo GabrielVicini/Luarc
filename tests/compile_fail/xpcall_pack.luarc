@@ -1,0 +1,2 @@
+-- expect-error: 2:7: xpcall of a function returning a variable number of values is not supported yet
+print(xpcall(function(...: number)return ... end,function(e)return e end))

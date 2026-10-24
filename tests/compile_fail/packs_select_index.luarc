@@ -1,0 +1,2 @@
+select()
+-- expect-error: 1:1: select expects an index or '#'

@@ -1,0 +1,3 @@
+local x = 1
+break
+-- expect-error: 2:1: 'break' outside a loop

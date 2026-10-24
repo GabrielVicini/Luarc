@@ -1,0 +1,19 @@
+local log = print
+log("a")
+log("a", 1, true)
+local up = string.upper
+print(up("abc"))
+local insert = table.insert
+local t = {}
+insert(t, 3)
+insert(t, 4)
+print(#t)
+local function apply(f: (string) -> string, s: string): string
+    return f(s)
+end
+print(apply(string.upper, "xyz"), apply(tostring, "q"))
+local show: (number) -> () = print
+show(5)
+local ok, e = pcall(function() error("boom") end)
+print(ok, e)
+-- a builtin value whose signature cannot be inferred is an error (see compile_fail)

@@ -1,0 +1,5 @@
+[package]
+name = "egui_editor"
+
+[dependencies.editor_host]
+path = "native"

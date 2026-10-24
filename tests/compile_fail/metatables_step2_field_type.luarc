@@ -1,0 +1,4 @@
+local child = setmetatable({x = 1}, {__index = {x = false}})
+child.x = nil
+print(child.x)
+-- expect-error: 3:13: type mismatch: expected boolean, found number

@@ -1,0 +1,120 @@
+-- Luau 0.743: inherited methods use the instance and live class storage.
+do
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+function Class:get() return self.x end
+
+local obj = Class.new(7)
+print("class", obj:get(), obj.get(obj), Class.__index == Class)
+local function read_x(t) return t.x end
+local plain = {x = 9}
+local plain_alias = plain
+local isolated = {x = 11}
+print("shared", read_x(obj), read_x(plain), read_x(plain_alias), isolated.x)
+print("plain-method", plain.get == nil)
+plain.x = 10
+print("plain-alias", read_x(plain_alias), obj:get())
+end
+do
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+local obj = Class.new(7)
+local function old(self, arg) print("old", self.x, arg) return self.x end
+local function new(self, arg) print("new", self.x, arg) return self.x + arg end
+local function receiver() print("receiver") return obj end
+local function argument() print("argument") Class.get = new return 3 end
+Class.get = old
+print("dot", receiver().get(obj, argument()))
+Class.get = old
+print("colon", receiver():get(argument()))
+Class.get = old
+obj.get = old
+print("own-colon", receiver():get(argument()))
+local function own_argument() print("own-argument") obj.get = new return 3 end
+obj.get = old
+print("own-replace-colon", receiver():get(own_argument()))
+obj.get = nil
+local function shadow_argument() print("shadow-argument") obj.get = new return 3 end
+Class.get = old
+print("shadow-colon", receiver():get(shadow_argument()))
+end
+do
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+function Class:pair() return self.x, 9 end
+function Class:tail(...: number): (number, ...number) return self.x, ... end
+local obj = Class.new(7)
+print("pair-colon", obj:pair())
+print("pair-dot", obj.pair(obj))
+local a, b, c = obj:pair()
+print("adjust", a, b, c)
+print("tail-colon", obj:tail(1, 2))
+print("tail-dot", obj.tail(obj, 3, 4))
+print("tail-empty", obj:tail())
+local function first() print("first") return 2 end
+local function last() print("last") return 3, 4 end
+function Class:add(a, b) return self.x + a + b end
+print("args", obj:add(first(), last()))
+end
+do
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+local obj = Class.new(7)
+local function old(self, a) print("old", self.x, a) return self.x end
+local function new(self, a) print("new", self.x, a) return self.x + a end
+local function argument() print("argument") Class.get = new return 3, 4 end
+Class.get = old
+print("dot-extra", obj.get(obj, 2, argument()))
+Class.get = old
+print("colon-extra", obj:get(2, argument()))
+local function replace() print("replace") obj = Class.new(11) return 2 end
+Class.get = old
+print("saved-self", obj:get(replace()))
+print("new-self", obj:get(2))
+end
+do
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+function Class:get(a) print("get", self.x, a) return self.x end
+local obj = Class.new(7)
+local holder = {obj = obj}
+local function change() print("change") obj = Class.new(11) holder.obj = obj return 2 end
+local function receiver() print("receiver") return obj end
+print("name", obj:get(change()))
+obj = Class.new(7) holder.obj = obj
+print("paren", (obj):get(change()))
+obj = Class.new(7) holder.obj = obj
+print("field", holder.obj:get(change()))
+obj = Class.new(7) holder.obj = obj
+print("call", receiver():get(change()))
+obj = Class.new(7) holder.obj = obj
+print("dot", obj.get(obj, change()))
+end
+do
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+function Class:get(a) return self.x end
+local obj = Class.new(7)
+local function change() obj = Class.new(11) return 2 end
+local function run() return obj:get(change()) end
+print("upvalue", run())
+end
+do
+local A = {}
+A.__index = A
+function A:get() return self.x end
+local B = {}
+B.__index = B
+function B:get() return self.x + 1 end
+local obj = setmetatable({x = 7}, A)
+local alias = obj
+print("before", obj:get())
+print("identity", setmetatable(obj, B) == obj)
+print("after", alias:get())
+end

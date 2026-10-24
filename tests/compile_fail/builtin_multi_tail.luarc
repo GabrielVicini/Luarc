@@ -1,0 +1,5 @@
+local function two(): (number, number)
+    return 1, 2
+end
+print(math.abs(two()))
+-- expect-error: 4:12: math function expects 1 argument(s), got 2

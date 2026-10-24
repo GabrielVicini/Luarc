@@ -1,0 +1,33 @@
+-- Documented evaluation order: left to right; compound targets evaluated once;
+-- parallel assignment evaluates targets and values before writing.
+local trace = {}
+local function note(tag: string, v: number): number
+    table.insert(trace, tag)
+    return v
+end
+
+local function add3(a: number, b: number, c: number): number return a + b + c end
+print(add3(note("a", 1), note("b", 2), note("c", 3)), table.concat(trace, ""))
+
+-- compound assignment target evaluated once
+trace = {}
+local t = {10, 20, 30}
+t[note("i", 2)] += note("v", 5)
+print(t[2], table.concat(trace, ""))
+
+-- parallel assignment: values computed before any write (swap)
+local x, y = 1, 2
+x, y = y, x
+print(x, y)
+local arr = {1, 2, 3}
+local i = 1
+i, arr[i] = i + 1, 99   -- arr[i] uses i evaluated before the assignment
+print(i, arr[1], arr[2])
+
+-- short-circuit evaluation
+trace = {}
+local r = note("l", 0) > 1 and note("r", 1) > 0
+print(r, table.concat(trace, ""))
+trace = {}
+local s = note("l", 5) or note("r", 6)
+print(s, table.concat(trace, ""))

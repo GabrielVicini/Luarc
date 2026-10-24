@@ -1,0 +1,6 @@
+-- expect-error: 0:0: opaque typed functions manually boxed into any cannot be used with runtime-table features
+local trigger = setmetatable({}, {__metatable=false})
+local _, callback = pcall(function() return function() return "word" end end)
+local boxed: any = callback
+local callable = setmetatable({}, {__call=boxed})
+print(callable())

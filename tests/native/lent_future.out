@@ -1,0 +1,4 @@
+in callback	false	lent_future.luarc:10: 'Tree:label_after' returns a future that borrows Tree, which is only lent to the running callback; the future could outlive the loan
+walked	1
+result	none
+owned	root

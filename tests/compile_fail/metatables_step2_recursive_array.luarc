@@ -1,0 +1,4 @@
+local t = {}
+t[1] = t
+print(t[1] == t)
+-- expect-error: 1:11: recursive type expansion is not supported; use a record to break the cycle

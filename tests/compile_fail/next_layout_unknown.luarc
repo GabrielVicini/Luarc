@@ -1,0 +1,4 @@
+--!optimize 18446744073709551616
+-- expect-error: 3:11: table allocation depends on an unproven Luau optimization directive; use --!optimize 0, 1, or 2
+local t = {[1]="a", [2]="b", [3]="c"}
+print(next(t, 4))

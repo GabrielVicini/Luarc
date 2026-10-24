@@ -1,0 +1,23 @@
+-- Native Clone is explicit (`obj:clone()`), never applied implicitly: passing a
+-- non-Copy object by value consumes it; aliases observe the consumption.
+local fx = require("rust:fixture")
+
+local a = fx.Notes.new()
+a:push("one")
+local alias = a                 -- an alias: the same native object
+local copy = a:clone()          -- Clone::clone: an independent value
+alias:push("two")
+print(a:len(), alias:len(), copy:len())
+
+-- clone of a shared resource shares it (the type's own Clone semantics)
+local s = fx.SharedCount.new()
+local t = s:clone()
+s:bump()
+t:bump()
+print(s:get(), t:get())
+
+-- by-value parameters consume: no hidden clone
+print(fx.seal(copy))
+print(pcall(function() return copy:len() end))
+print(pcall(function() return fx.seal(copy) end))
+print(a:len())

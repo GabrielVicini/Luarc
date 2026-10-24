@@ -1,0 +1,7 @@
+local function id(t) return t end
+local f = id
+local dense: {any} = {1}
+local a = f(dense)
+local b = f(table.pack(1, nil))
+print(a, b)
+-- expect-error: 5:19: nil-preserving and dense arrays cannot share one static type

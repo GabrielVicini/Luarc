@@ -1,0 +1,9 @@
+# luarc project manifest
+[package]
+name = "editor_scratch"
+
+[dependencies.flite-rs]
+version = "*"
+
+[dependencies.rodio]
+version = "*"

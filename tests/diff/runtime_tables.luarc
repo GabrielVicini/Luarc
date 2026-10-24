@@ -1,0 +1,20 @@
+local trace = ""
+local function argument(s) trace ..= s return s end
+local object = setmetatable({value="item"}, {
+    __tostring=function(self) trace ..= "T" return "<"..self.value..">" end,
+    __unm=function(self) return -7 end,
+})
+print(argument("a"), object, argument("b"))
+print(trace, tostring(object), -object)
+local function log(...: any) print(...) end
+log("tail", object, nil, 4)
+local callable = setmetatable({}, {__call=function() return "x", nil, "z" end})
+print("call", callable())
+local nested={child={value=9}, __metatable=false}
+print(nested.child.value)
+rawset(nested,"late",12)
+print(rawget(nested,"late"), rawequal(nested,nested), rawlen("abc"))
+local ok, err = pcall(function()
+    print("prefix", setmetatable({}, {__tostring=function() error("fail",0) end}), "tail")
+end)
+print("caught",ok,err)

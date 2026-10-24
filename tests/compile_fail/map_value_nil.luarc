@@ -1,0 +1,2 @@
+local m: {[string]: number?} = {}
+-- expect-error: 1:21: map values cannot be nil

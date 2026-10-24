@@ -1,0 +1,18 @@
+-- Runtime errors match Luau 0.743 without Rust panics or false compile errors.
+local t = {}
+for i = 1, 100 do table.insert(t, (i * 37) % 101) end
+local ok, err = pcall(function() table.sort(t, function(a, b) return true end) end)
+print(ok, err)
+local u = {}
+for i = 1, 50 do table.insert(u, if i % 7 == 0 then 0/0 else (i * 13) % 17) end
+local ok2 = pcall(function() table.sort(u) end)
+print(ok2)
+local calls = 0
+local v = {5, 3, 1, 4, 2, 9, 7, 8, 6, 0}
+table.sort(v, function(a, b) calls += 1 return a < b end)
+print(table.concat(v, ","), calls <= 40)
+local words = {"b", "a", "c", "a"}
+table.sort(words, function(x, y) return x > y end)
+print(table.concat(words, ","))
+local function require(x: string): string return "mine " .. x end
+print(require("foo"))

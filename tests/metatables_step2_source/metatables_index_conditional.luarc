@@ -1,0 +1,3 @@
+local C = {}
+if true then C.__index = C end
+setmetatable({}, C)

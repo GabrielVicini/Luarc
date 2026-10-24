@@ -1,0 +1,2 @@
+-- expect-error: 2:7: xpcall of a handler returning a variable number of values is not supported yet
+print(xpcall(function()end,function(...:string)return ... end))

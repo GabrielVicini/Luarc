@@ -1,0 +1,22 @@
+local t = {["literal"] = 1}
+print(next(t, "literal") == nil)
+local constant = "lit" .. "eral"
+print(next(t, constant) == nil)
+local key, value = next(t)
+if key ~= nil then
+    t[key] = nil
+    print(next(t, key) == nil)
+end
+local map = {[false] = 1, [true] = 2}
+print(next(map, true) == nil)
+local a = {1, 2}
+print(next(a, nil))
+local k = nil
+local seen = 0
+while true do
+    local value
+    k, value = next(a, k)
+    if k == nil then break end
+    seen += 1
+end
+print(seen)

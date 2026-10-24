@@ -1,0 +1,23 @@
+-- string.format directives: integer, float, character, string and quoted forms
+-- with flags, width and precision (compared against Luau 0.743 by the harness).
+-- NaN is left out: its printed form is platform dependent.
+print(string.format("[%d][%i][%5d][%-5d][%05d][%+d][% d][%.3d][%5.3d][%-+5d]", 42, -42, 42, 42, -42, 42, 42, 7, 7, 3))
+print(string.format("[%x][%X][%#x][%#X][%o][%#o][%u][%08x][%#010x][%.4x]", 255, 255, 255, 255, 8, 8, 5, 48879, 48879, 10))
+print(string.format("[%x][%u][%x][%d]", -1, -1, 3.7, "10"))
+print(string.format("[%x][%d][%d]", 2^40, 2^53, -2^40))
+print(string.format("[%c%c%c][%5c][%-5c]", 76, 117, 97, 65, 66))
+print(string.format("[%e][%E][%.3e][%.0e][%#.0e][%12.4e][%-12.2e][%+e]", 12345.6789, 0.000123, 0, 15, 15, 1234.5, 1234.5, 1.5))
+print(string.format("[%g][%g][%g][%g][%g][%g][%g]", 100000, 1e6, 0.0001, 1e-5, 123456, 1234567, 0.5))
+print(string.format("[%.3g][%.10g][%.17g][%.0g][%.1g][%G][%#g][%#g]", 3.14159, 0.1, 0.1, 123, 0.95, 1e-10, 1.5, 100000))
+print(string.format("[%g][%g][%g][%e][%f]", 1/0, -1/0, 1e100, 1/0, -1/0))
+print(string.format("[%f][%.0f][%.0f][%.0f][%#.0f][%.2f][%.20f]", 1.5, 0.5, 1.5, 2.5, 1, 2.675, 0.1))
+print(string.format("[%5.1f][%-8.2f][%010.2f][%+.2f][% .2f][%012g][%012g]", 2.25, 1.005, -3.5, 2, 2, -0.5, 1/0))
+print(string.format("[%s][%5s][%-5s][%.2s][%.0s][%05s][%10.3s]", "ab", "ab", "ab", "abcdef", "abc", "ab", "abcdef"))
+print(string.format("[%s][%s][%5s]", 5, 1.5, 7))
+print(#string.format("%5s", "a\0b"), #string.format("%s", "a\0b"), #string.format("%.3s", "a\0b"))
+print(#string.format("%99s", string.rep("x", 120)), #string.format("%99s", string.rep("x", 20)))
+print(string.format("%q", "a\nb\"c\x5Cd\0e\r!"), string.format("%q", 5), string.format("%5q", "x"))
+print(string.format("%d%%|%%d|%5.1f%%", 5, 99.5))
+local function pair() return 255, 16 end
+print(string.format("%x %X", pair()))
+print(pcall(function() return string.format("%d", "x") end))

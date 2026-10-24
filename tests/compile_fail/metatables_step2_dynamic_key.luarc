@@ -1,0 +1,4 @@
+local child = setmetatable({}, {__index = {x = 1}})
+local key = "x"
+print(child[key])
+-- expect-error: 3:12: records can only be indexed with field names (use a map type for dynamic keys)

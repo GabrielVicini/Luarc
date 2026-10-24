@@ -1,0 +1,2 @@
+print(coroutine.running())
+-- expect-error: 1:17: coroutine.running is unsupported

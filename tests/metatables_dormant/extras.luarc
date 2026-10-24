@@ -1,0 +1,15 @@
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+local obj = Class.new(7)
+local function old(self, a) print("old", self.x, a) return self.x end
+local function new(self, a) print("new", self.x, a) return self.x + a end
+local function argument() print("argument") Class.get = new return 3, 4 end
+Class.get = old
+print("dot-extra", obj.get(obj, 2, argument()))
+Class.get = old
+print("colon-extra", obj:get(2, argument()))
+local function replace() print("replace") obj = Class.new(11) return 2 end
+Class.get = old
+print("saved-self", obj:get(replace()))
+print("new-self", obj:get(2))

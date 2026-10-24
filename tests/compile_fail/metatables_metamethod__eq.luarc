@@ -1,0 +1,5 @@
+local C = {}
+C.__index = C
+C.__eq = 1
+setmetatable({}, C)
+-- expect-error: 4:1: metamethod '__eq' is not supported in this step

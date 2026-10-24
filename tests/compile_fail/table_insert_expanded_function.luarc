@@ -1,0 +1,5 @@
+-- expect-error: 5:19: inserting an expanded function result into a runtime table is not supported yet; bind it to a local first
+local function produce() return 1,function()return 2 end end
+local list={}
+table.freeze({})
+table.insert(list,produce())

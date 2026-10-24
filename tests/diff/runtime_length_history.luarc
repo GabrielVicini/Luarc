@@ -1,0 +1,9 @@
+-- Table lengths depend on allocation history.
+-- Compare the resulting lengths with Luau.
+do
+ local t={1,2,__metatable=false} print(#t) t[4]=3
+ print(#t)
+end
+do
+ local mt={__len=function() return 7 end} local t=setmetatable({[1]=1,[3]=3},mt) rawset(mt,'__len',nil) print(#t)
+end

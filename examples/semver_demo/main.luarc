@@ -1,0 +1,36 @@
+-- semver: a second real crate with a different API style (parsed value objects,
+-- public u64 fields, borrowed handle arguments, Display/PartialEq).
+local semver = require("rust:semver")
+
+local v = semver.Version.parse("1.4.2-beta.1")
+print(tostring(v), v.major, v.minor, v.patch)
+
+-- public fields are readable and writable through the handle (checked u64 conversion)
+local w = semver.Version.new(2, 0, 0)
+w.minor = 3
+print(tostring(w))
+local ok, err = pcall(function() return semver.Version.new(-1, 0, 0) end)
+print("negative major rejected:", not ok)
+
+-- Display and PartialEq of native values
+print(semver.Version.parse("1.0.0") == semver.Version.new(1, 0, 0))
+
+-- borrowed handle arguments (&Version)
+local req = semver.VersionReq.parse(">=1.2.0, <2.0.0")
+local candidates = {"1.0.0", "1.2.0", "1.9.9", "2.0.0", "1.5.0-alpha"}
+local matching = {}
+for _, text in ipairs(candidates) do
+    if req:matches(semver.Version.parse(text)) then
+        table.insert(matching, text)
+    end
+end
+print(tostring(req), table.concat(matching, " "))
+
+-- errors from parsing are catchable language errors
+local bad_ok, bad = pcall(function() return semver.Version.parse("not a version") end)
+if not bad_ok then
+    print("error:", bad)
+end
+
+local cmp = semver.Comparator.parse("^1.2")
+print(cmp:matches(semver.Version.new(1, 7, 0)), cmp.major, cmp.minor, cmp.patch)

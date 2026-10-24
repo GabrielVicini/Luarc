@@ -1,0 +1,48 @@
+-- Luau Impostor Detector: single-file semantic conformance stress test
+-- Intended for a current, full-featured standalone Luau runtime.
+-- No Roblox services, filesystem, or third-party libraries required.
+-- A compile-time rejection is itself a useful compatibility result.
+--!nocheck
+
+
+
+local passed = 0
+local failed = 0
+local failures = {}
+
+local function equal(actual, expected, label)
+    if actual ~= expected then
+        error(string.format("%s: expected %s, got %s", label or "comparison", tostring(expected), tostring(actual)), 2)
+    end
+end
+
+local function check(condition, label)
+    if not condition then
+        error(label or "assertion failed", 2)
+    end
+end
+
+local function probe(name, fn)
+    local ok, err = pcall(fn)
+    if ok then
+        passed += 1
+        print("[PASS] " .. name)
+    else
+        failed += 1
+        table.insert(failures, name .. " -> " .. tostring(err))
+        print("[FAIL] " .. name .. " -> " .. tostring(err))
+    end
+end
+
+probe("26 pattern captures, balanced matches, gsub", function()
+    equal(string.match("a(b(c)d)e", "%b()"), "(b(c)d)")
+    local changed, count = string.gsub("a1 b22 c333", "(%a)(%d+)", function(letter, digits)
+        return letter .. tostring(#digits)
+    end)
+    equal(changed, "a1 b2 c3")
+    equal(count, 3)
+    local startPos, endPos = string.find("aa.b", "a.b", 1, true)
+    equal(startPos, 2)
+    equal(endPos, 4)
+end)
+print(string.format("p26: %d passed, %d failed", passed, failed))

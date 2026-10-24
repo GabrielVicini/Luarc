@@ -1,0 +1,5 @@
+local function make()
+ return function(value:number) return value end
+end
+local ok,value=xpcall(make,function(err)return err end)
+print(ok,type(value))

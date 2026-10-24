@@ -1,0 +1,72 @@
+local fx = require("rust:fixture")
+
+-- free functions, scalars, strings, bytes
+print(fx.add(1.5, 2), fx.greet("luau"), fx.shout("abc"))
+print(fx.count_bytes("a\0b"), fx.bytes_echo("x\0y") == "x\0y", fx.to_u8(255))
+print(fx.halve(3), fx.first_char("héllo"), fx.first_char(""))
+print(fx.ANSWER, fx.GREETING)
+
+-- Option -> optional, Result -> value or catchable error
+print(fx.checked_div(7, 2), fx.checked_div(1, 0))
+print(fx.parse_port("8080"))
+local ok, err = pcall(function() return fx.parse_port("http") end)
+print(ok, err)
+
+-- tuples -> multiple results, Vec/slices <-> tables (snapshots)
+local lo, hi = fx.min_max({3, -1, 7.5})
+print(lo, hi)
+local k, v = fx.split_pair("key=value")
+print(k, v)
+local sq = fx.squares(4)
+print(#sq, table.concat(sq, ","))
+local nums = {1, 2, 3}
+print(fx.sum_all(nums), #nums)
+print(fx.join_words({"a", "b", "c"}, "-"), fx.fixed_pair({6, 7}))
+
+-- re-exported type, alias path, methods (shared and mutable)
+local c = fx.Circle.new(2)
+local same = c
+c:scale(1.5)
+print(c:radius(), same:radius(), c:label())
+local d = fx.Disc.new(1)
+print(string.format("%.4f", d:area()))
+local e = fx.shapes.Circle.new(3)
+print(e:radius())
+
+-- public data struct converted by value (record)
+local m = fx.midpoint({x = 0, y = 0}, {x = 4, y = 2})
+print(m.x, m.y)
+local moved = fx.translate(m, 10)
+print(moved.x, m.x)
+print(fx.centroid({{x = 0, y = 0}, {x = 2, y = 4}}).y)
+
+-- handle with public fields and mutable methods
+local counter = fx.Counter.new()
+counter.step = 5
+counter:inc()
+counter:inc()
+counter:add(1)
+print(counter:get(), counter.step)
+
+-- simple enums: constants and constructors
+local col = fx.Color.Red
+print(fx.color_name(col), fx.color_name(fx.next_color(col)), col == fx.Color.Red, col == fx.Color.Blue)
+print(fx.shape_area(fx.Shape.Rect(2, 3)), tostring(fx.Shape.Circle(1)))
+
+-- generic functions specialised from the arguments / expected result
+print(fx.largest({3, 9, 2}), fx.describe(1.5), fx.describe("s"))
+local parsed: number? = fx.parse_num("12.5")
+print(parsed)
+local reps = fx.repeat_value("ab", 3)
+print(table.concat(reps, ""))
+
+-- synchronous callbacks: ordinary closures, including mutable captures
+print(fx.apply_twice(function(x) return x * 3 end, 2))
+local words = {}
+fx.for_each_word("the quick  fox", function(w) table.insert(words, w:upper()) end)
+print(table.concat(words, " "))
+local offset = 100
+print(table.concat(fx.map_values({1, 2}, function(x) return x + offset end), ","))
+local calls = 0
+fx.call_n(4, function() calls += 1 end)
+print("calls", calls)

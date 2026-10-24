@@ -1,0 +1,73 @@
+-- Exact packs, sparse call constructors, fixed select, and protected result tails.
+local function tri() return 'A', nil, 'C' end
+local function relay(...: any) return 'prefix', ... end
+local function verify(t, n)
+  assert(t.n == n)
+end
+local empty = table.pack()
+verify(empty, 0)
+local t = table.pack('a', nil, 'c', false, nil)
+verify(t, 5)
+assert(t[1] == 'a' and t[2] == nil and t[3] == 'c' and t[4] == false and t[5] == nil)
+local u = table.pack(table.unpack(t, 1, t.n))
+verify(u, 5)
+assert(u[1] == 'a' and u[2] == nil and u[3] == 'c' and u[4] == false and u[5] == nil)
+verify(table.pack(table.unpack(t, 3, 1)), 0)
+verify(table.pack(table.unpack(t, 0, 6)), 7)
+verify(table.pack(tri()), 3)
+verify(table.pack(9, tri()), 4)
+verify(table.pack(tri(), 9), 2)
+verify(table.pack((tri())), 1)
+local a = { 'first', tri() }
+assert(a[1] == 'first' and a[2] == 'A' and a[3] == nil and a[4] == 'C')
+local b = { tri(), 'last' }
+assert(b[1] == 'A' and b[2] == 'last' and b[3] == nil)
+local r = table.pack(relay(4, nil, false, 'end'))
+verify(r, 5)
+assert(r[1] == 'prefix' and r[2] == 4 and r[3] == nil and r[4] == false and r[5] == 'end')
+assert(select('#') == 0 and select('#', nil) == 1 and select('#', 4, nil, 6) == 3)
+local selected = select(1, 2, 3)
+assert(selected == 2)
+local s = table.pack(select(2, 'x', nil, 'z'))
+verify(s, 2)
+assert(s[1] == nil and s[2] == 'z')
+local last = table.pack(select(-1, 'x', nil, 'z'))
+verify(last, 1)
+assert(last[1] == 'z')
+verify(table.pack(select(7, 1, 2)), 0)
+assert(select('#', tri()) == 3)
+local protected = table.pack(pcall(tri))
+verify(protected, 4)
+assert(protected[1] == true and protected[2] == 'A' and protected[3] == nil and protected[4] == 'C')
+local all = table.pack(pcall(relay, 4, nil, false, 'end'))
+verify(all, 6)
+assert(all[1] == true and all[2] == 'prefix' and all[3] == 4 and all[4] == nil and all[5] == false and all[6] == 'end')
+local function forward(...: number?) return ... end
+local variadic = table.pack(pcall(forward, 1, nil, 3))
+verify(variadic, 4)
+assert(variadic[1] == true and variadic[2] == 1 and variadic[3] == nil and variadic[4] == 3)
+local function protected_forward(...: number?) return pcall(forward, ...) end
+local forwarded = table.pack(protected_forward(1, nil, 3))
+verify(forwarded, 4)
+assert(forwarded[1] == true and forwarded[2] == 1 and forwarded[3] == nil and forwarded[4] == 3)
+local ranged = {table.unpack({1, 2}, 0, 3)}
+assert(ranged[1] == nil and ranged[2] == 1 and ranged[3] == 2 and ranged[4] == nil)
+local missing: {number} = {}
+local soft = {missing[1], tri()}
+assert(soft[1] == nil and soft[2] == 'A' and soft[3] == nil and soft[4] == 'C')
+local function nothing() end
+verify(table.pack(pcall(nothing)), 1)
+local failed = table.pack(pcall(function() error('sentinel', 0) end))
+verify(failed, 2)
+assert(failed[1] == false and failed[2] == 'sentinel')
+local invalid = table.pack(pcall(function() return select(0, 'a', nil) end))
+verify(invalid, 2)
+assert(invalid[1] == false and string.find(tostring(invalid[2]), "invalid argument #1 to 'select' (index out of range)", 1, true) ~= nil)
+local trace = ''
+local function mark(s)
+  trace ..= s
+  return s, nil
+end
+local ordered = table.pack(mark('a'), mark('b'))
+assert(trace == 'ab' and ordered.n == 3 and ordered[1] == 'a' and ordered[2] == 'b' and ordered[3] == nil)
+print('packs: ok')

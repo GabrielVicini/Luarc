@@ -1,0 +1,2 @@
+-- expect-error: 2:28: xpcall expects a function as its second argument
+print(xpcall(function()end,1))

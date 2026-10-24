@@ -1,0 +1,58 @@
+-- Luau Impostor Detector: single-file semantic conformance stress test
+-- Intended for a current, full-featured standalone Luau runtime.
+-- No Roblox services, filesystem, or third-party libraries required.
+-- A compile-time rejection is itself a useful compatibility result.
+--!nocheck
+
+
+
+local passed = 0
+local failed = 0
+local failures = {}
+
+local function equal(actual, expected, label)
+    if actual ~= expected then
+        error(string.format("%s: expected %s, got %s", label or "comparison", tostring(expected), tostring(actual)), 2)
+    end
+end
+
+local function check(condition, label)
+    if not condition then
+        error(label or "assertion failed", 2)
+    end
+end
+
+local function probe(name, fn)
+    local ok, err = pcall(fn)
+    if ok then
+        passed += 1
+        print("[PASS] " .. name)
+    else
+        failed += 1
+        table.insert(failures, name .. " -> " .. tostring(err))
+        print("[FAIL] " .. name .. " -> " .. tostring(err))
+    end
+end
+
+probe("05 multiple returns and preserved nil slots", function()
+    local function tri()
+        return "A", nil, "C"
+    end
+    local a = table.pack(tri())
+    equal(a.n, 3)
+    equal(a[1], "A")
+    equal(a[2], nil)
+    equal(a[3], "C")
+    local b = table.pack(99, tri())
+    equal(b.n, 4)
+    equal(b[2], "A")
+    equal(b[3], nil)
+    equal(b[4], "C")
+    local c = table.pack(tri(), 99)
+    equal(c.n, 2)
+    equal(c[1], "A")
+    equal(c[2], 99)
+    local d = table.pack((tri()))
+    equal(d.n, 1)
+end)
+print(string.format("p05: %d passed, %d failed", passed, failed))

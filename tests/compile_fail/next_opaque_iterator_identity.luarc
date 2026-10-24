@@ -1,0 +1,21 @@
+local old = string.rep("x", 40) .. "tail"
+local actual = setmetatable({}, {
+    __iter = function()
+        return function()
+            return string.rep("x", 40) .. "tail"
+        end
+    end,
+})
+actual[old] = true
+actual[old] = nil
+local erased: any = actual
+local held = {}
+for i = 1, 100000 do held[i] = "hold" .. i end
+if type(erased) == "table" then
+    local marker = erased.marker
+    for key in erased do
+        next(erased, key)
+        break
+    end
+end
+-- expect-error: 17:22: next continuation key has GC-sensitive identity that cannot be proven safe; use a numeric/boolean key, a literal/constant string, or a retained key from next on this table

@@ -1,0 +1,4 @@
+for a, b in string.gmatch("abc", "%a") do
+    print(a, b)
+end
+-- expect-error: 1:8: the pattern gives 1 value(s) per match, the loop binds 2

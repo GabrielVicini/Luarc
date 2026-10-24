@@ -1,0 +1,6 @@
+false	patterns_dynamic_errors.luarc:10: bad argument #2 to 'match' (pattern "(%w+)=(%w+)" has 2 capture(s), whose values this call would drop; the results of a pattern with captures need a string literal pattern, or a local initialized with one and never reassigned)
+false	patterns_dynamic_errors.luarc:14: bad argument #2 to 'find' (pattern "(%w+)=(%w+)" has 2 capture(s), whose values this call would drop; the results of a pattern with captures need a string literal pattern, or a local initialized with one and never reassigned)
+false	patterns_dynamic_errors.luarc:18: bad argument #2 to 'match' (pattern "()b" starts with a position capture (a number) where this call gives a string; the results of a pattern with captures need a string literal pattern, or a local initialized with one and never reassigned)
+false	patterns_dynamic_errors.luarc:23: bad argument #2 to 'match' (pattern "(%w+)=(%w+)" has 2 capture(s), whose values this call would drop; the results of a pattern with captures need a string literal pattern, or a local initialized with one and never reassigned)
+key	2	2
+true	2	4

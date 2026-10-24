@@ -1,0 +1,32 @@
+-- Intentional checked-read behaviour (Luau semantics, statically typed). The
+-- twin checked_reads_annotated.luarc adds annotations; outputs must match.
+-- * a map read of a missing key and an array read past the end yield nil
+-- * using a possibly-nil value where a value is required is a compile error
+--   unless the program checks it, or a runtime error at that use when the value
+--   comes from an optional read that was not narrowed
+-- * number keys: -0 and 0 are one key; NaN is rejected as a key; float keys work
+local scores: {[string]: number} = {}
+scores["ann"] = 10
+local missing: number? = scores["bob"]
+print(missing == nil, missing)
+local arr: {number} = {1, 2, 3}
+print(arr[4], arr[0])
+local ok, err = pcall(function() return scores["bob"] + 1 end)
+print(ok, err)
+
+-- narrowing by an explicit check
+local v: number? = scores["ann"]
+if v ~= nil then print(v + 1) end
+local w: number = scores["bob"] or 0
+print(w + 1)
+
+-- numeric keys (a table written with number keys is an array unless declared a
+-- map: arrays stay dense, so the map is declared)
+local m: {[number]: string} = {}
+m[0] = "zero"
+print(m[-0.0], m[0])
+m[1.5] = "one and a half"
+print(m[1.5], m[3 / 2])
+local okn, errn = pcall(function() m[0 / 0] = "nan" end)
+print(okn, errn)
+print(m[0 / 0])

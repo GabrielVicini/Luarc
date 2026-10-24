@@ -1,0 +1,7 @@
+local function id(t) return t end
+local f = id
+local function tri() return 1, nil, 3 end
+local a = f(table.pack(1, nil, 3))
+local b = f({tri()})
+print(a, b)
+-- expect-error: 5:13: table.pack results and nil-preserving constructors cannot share one static type

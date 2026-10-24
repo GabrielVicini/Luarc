@@ -1,0 +1,2 @@
+count = 1
+-- expect-error: 1:1: assignment to undeclared variable 'count'

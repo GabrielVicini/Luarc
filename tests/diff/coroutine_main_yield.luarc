@@ -1,0 +1,5 @@
+print("before", coroutine.isyieldable())
+pcall(function()
+    coroutine.yield("main", nil)
+end)
+print("unreachable")

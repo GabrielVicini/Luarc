@@ -1,0 +1,4 @@
+-- expect-error: 2:42: a value of type integer cannot be converted to 'any'
+local function bits(x) return bit32.band(x) end
+local n:integer=5
+print(bits(n))

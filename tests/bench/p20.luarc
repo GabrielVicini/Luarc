@@ -1,0 +1,58 @@
+-- Luau Impostor Detector: single-file semantic conformance stress test
+-- Intended for a current, full-featured standalone Luau runtime.
+-- No Roblox services, filesystem, or third-party libraries required.
+-- A compile-time rejection is itself a useful compatibility result.
+--!nocheck
+
+
+
+local passed = 0
+local failed = 0
+local failures = {}
+
+local function equal(actual, expected, label)
+    if actual ~= expected then
+        error(string.format("%s: expected %s, got %s", label or "comparison", tostring(expected), tostring(actual)), 2)
+    end
+end
+
+local function check(condition, label)
+    if not condition then
+        error(label or "assertion failed", 2)
+    end
+end
+
+local function probe(name, fn)
+    local ok, err = pcall(fn)
+    if ok then
+        passed += 1
+        print("[PASS] " .. name)
+    else
+        failed += 1
+        table.insert(failures, name .. " -> " .. tostring(err))
+        print("[FAIL] " .. name .. " -> " .. tostring(err))
+    end
+end
+
+probe("20 coroutine yield/resume and dead state", function()
+    local co = coroutine.create(function(start)
+        local a, b = coroutine.yield("phase1", start + 1, nil)
+        return "phase2", a * 2, b
+    end)
+    equal(coroutine.status(co), "suspended")
+    local first = table.pack(coroutine.resume(co, 10))
+    equal(first.n, 4)
+    equal(first[1], true)
+    equal(first[2], "phase1")
+    equal(first[3], 11)
+    equal(first[4], nil)
+    local second = table.pack(coroutine.resume(co, 7, "ok"))
+    equal(second.n, 4)
+    equal(second[1], true)
+    equal(second[2], "phase2")
+    equal(second[3], 14)
+    equal(second[4], "ok")
+    equal(coroutine.status(co), "dead")
+    equal(select(1, coroutine.resume(co)), false)
+end)
+print(string.format("p20: %d passed, %d failed", passed, failed))

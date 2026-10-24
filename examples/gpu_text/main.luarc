@@ -1,0 +1,196 @@
+-- GPU text: a resizable native window showing text rendered by glyphon into a
+-- wgpu render pass. Every line of application logic is Luau; winit, wgpu,
+-- glyphon and std are imported directly (no Rust glue).
+local std = require("rust:std")
+local winit = require("rust:winit")
+local wgpu = require("rust:wgpu")
+local glyphon = require("rust:glyphon")
+
+local GREETING = "Hello from Luau!"
+local FONT_FILE = "Inter-Regular.ttf"
+local FONT_FAMILY = "Inter"
+
+-- Assets are packaged next to the executable, wherever it is launched from.
+local function asset_path(name: string)
+    local dir = assert(std.env.current_exe():parent(), "the executable has no parent directory")
+    return dir:join("assets"):join(name)
+end
+
+local app = {
+    window = nil,
+    gpu = nil,
+    keys = 0,
+    scale = 1.0,
+    frames = 0,
+    status = "starting",
+}
+
+-- Creates the text layout for the current state.
+function app:update_text()
+    local gpu = self.gpu
+    local window = self.window
+    if gpu == nil or window == nil then return end
+    local size = window:inner_size()
+    local text = string.format("%s\nWindow: %d x %d px (scale %.2f)\nKeys pressed: %d\nPress any key; Esc closes the window.",
+        GREETING, size.width, size.height, self.scale, self.keys)
+    gpu.buffer:set_metrics(glyphon.Metrics.new(32 * self.scale, 44 * self.scale))
+    gpu.buffer:set_size(size.width, size.height)
+    gpu.buffer:set_text(text, glyphon.Attrs.new():family(glyphon.Family.SansSerif), glyphon.Shaping.Advanced, nil)
+    gpu.buffer:shape_until_scroll(gpu.font_system, false)
+end
+
+function app:configure()
+    local gpu = self.gpu
+    local window = self.window
+    if gpu == nil or window == nil then return end
+    local size = window:inner_size()
+    if size.width == 0 or size.height == 0 then
+        return -- minimized: keep the old configuration until a real size arrives
+    end
+    gpu.config.width = size.width
+    gpu.config.height = size.height
+    gpu.surface:configure(gpu.device, gpu.config)
+    self:update_text()
+    window:request_redraw()
+end
+
+function app:redraw()
+    local gpu = self.gpu
+    local window = self.window
+    if gpu == nil or window == nil then return end
+    local size = window:inner_size()
+    if size.width == 0 or size.height == 0 then return end
+
+    gpu.viewport:update(gpu.queue, { width = gpu.config.width, height = gpu.config.height })
+    gpu.renderer:prepare(gpu.device, gpu.queue, gpu.font_system, gpu.atlas, gpu.viewport, {
+        {
+            buffer = gpu.buffer,
+            left = 24, top = 24, scale = 1,
+            bounds = { left = 0, top = 0, right = gpu.config.width, bottom = gpu.config.height },
+            default_color = glyphon.Color.rgb(240, 240, 255),
+            custom_glyphs = {},
+        },
+    }, gpu.swash)
+
+    -- surface states are ordinary enum values
+    local current = gpu.surface:get_current_texture()
+    if current.Timeout or current.Occluded then
+        window:request_redraw()
+        return
+    end
+    if current.Outdated or current.Lost then
+        self:configure()
+        return
+    end
+    if current.Validation then
+        error("the surface reported a validation error")
+    end
+    local frame = current.Success or current.Suboptimal
+    if frame == nil then return end
+
+    local view = frame.texture:create_view(wgpu.TextureViewDescriptor.default())
+    local encoder = gpu.device:create_command_encoder({ label = "text frame" })
+    do
+        -- the pass borrows the encoder until it is closed at the end of this block
+        local pass <close> = encoder:begin_render_pass({
+            label = "text pass",
+            color_attachments = { {
+                view = view,
+                ops = { load = wgpu.LoadOp.Clear({ r = 0.05, g = 0.07, b = 0.12, a = 1 }), store = wgpu.StoreOp.Store },
+            } },
+        })
+        gpu.renderer:render(gpu.atlas, gpu.viewport, pass)
+    end
+    gpu.queue:submit({ encoder:finish() })
+    gpu.queue:present(frame)
+    gpu.atlas:trim()
+    self.frames += 1
+end
+
+-- winit's ApplicationHandler, implemented by this table
+function app:resumed(event_loop)
+    if self.window ~= nil then return end
+    local attrs = winit.window.Window.default_attributes()
+        :with_title("luarc: GPU text")
+        :with_inner_size(winit.dpi.LogicalSize.new(820, 420))
+    local window = event_loop:create_window(attrs)
+    self.window = window
+    self.scale = window:scale_factor()
+    self.status = "initializing GPU"
+    -- GPU initialization runs as a task: the event loop stays responsive
+    task.spawn(function()
+        local instance = wgpu.Instance.default()
+        local surface = instance:create_surface(window)
+        local options = wgpu.RequestAdapterOptions.default()
+        options.compatible_surface = surface
+        local adapter = await(instance:request_adapter(options))
+        local device, queue = await(adapter:request_device(wgpu.DeviceDescriptor.default()))
+        local size = window:inner_size()
+        local config = assert(surface:get_default_config(adapter, math.max(size.width, 1), math.max(size.height, 1)),
+            "the window surface is not supported by the GPU adapter")
+        surface:configure(device, config)
+
+        -- fonts come from the bundled file only (no system fonts)
+        local db = glyphon.fontdb.Database.new()
+        db:load_font_data(std.fs.read(asset_path(FONT_FILE)))
+        db:set_sans_serif_family(FONT_FAMILY)
+        local font_system = glyphon.FontSystem.new_with_locale_and_db("en-US", db)
+        local cache = glyphon.Cache.new(device)
+        local atlas = glyphon.TextAtlas.new(device, queue, cache, config.format)
+        local renderer = glyphon.TextRenderer.new(atlas, device, wgpu.MultisampleState.default(), nil)
+        self.gpu = {
+            surface = surface, device = device, queue = queue, config = config,
+            font_system = font_system, swash = glyphon.SwashCache.new(), cache = cache,
+            viewport = glyphon.Viewport.new(device, cache), atlas = atlas, renderer = renderer,
+            buffer = glyphon.Buffer.new(font_system, glyphon.Metrics.new(32, 44)),
+        }
+        self.status = "ready"
+        print("gpu ready:", adapter:get_info().name)
+        self:configure()
+    end)
+end
+
+function app:user_event(event_loop, _)
+    -- a task was woken (task.wake_through below): let it run
+    task.run_ready()
+end
+
+function app:window_event(event_loop, _id, event)
+    if event.CloseRequested then
+        event_loop:exit()
+    elseif event.Resized then
+        self:configure()
+    elseif event.ScaleFactorChanged then
+        local change = event.ScaleFactorChanged
+        if change then self.scale = change.scale_factor end
+        self:configure()
+    elseif event.KeyboardInput then
+        local input = event.KeyboardInput
+        if input and input.event.state.Pressed then
+            local named = input.event.logical_key.Named
+            if named and named.Escape then
+                event_loop:exit()
+                return
+            end
+            self.keys += 1
+            self:update_text()
+            local window = self.window
+            if window then window:request_redraw() end
+        end
+    elseif event.RedrawRequested then
+        self:redraw()
+    end
+end
+
+function app:exiting(event_loop)
+    -- GPU resources go before the window they render to
+    print(string.format("exiting after %d frame(s), %d key(s)", self.frames, self.keys))
+    self.gpu = nil
+    self.window = nil
+    collectgarbage("collect")
+end
+
+local event_loop = winit.event_loop.EventLoop.new()
+task.wake_through(event_loop:create_proxy())
+event_loop:run_app(app)
+print("event loop finished")

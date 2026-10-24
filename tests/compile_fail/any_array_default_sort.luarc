@@ -1,0 +1,3 @@
+local t: {any} = {1,2}
+table.sort(t)
+-- expect-error: 2:12: attempt to compare an 'any' value (numbers or strings expected)

@@ -1,0 +1,9 @@
+root	2
+false	views.luarc:11: borrowed view 'Tree:add' of Tree is no longer valid: its owner was mutated, consumed or closed after the view was created
+first	root
+ROOT	ROOT
+child 0:	first
+child 5:	nil
+false	views.luarc:29: borrowed view 'Tree:child' of Tree is no longer valid: its owner was mutated, consumed or closed after the view was created
+from-registry	nil
+true

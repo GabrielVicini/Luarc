@@ -1,0 +1,3 @@
+local co = coroutine.create(function(x: number) return x + 1 end)
+print(co)
+-- expect-error: 1:29: coroutine values require supported dynamic representations

@@ -1,0 +1,4 @@
+local a, b = {}, {}
+setmetatable(a, {__index = b})
+setmetatable(b, {__index = a})
+-- expect-error: 3:1: cyclic static record parent types are not supported

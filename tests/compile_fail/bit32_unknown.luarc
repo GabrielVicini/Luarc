@@ -1,0 +1,2 @@
+-- expect-error: 2:13: bit32.missing is not supported in this version
+print(bit32.missing(1))

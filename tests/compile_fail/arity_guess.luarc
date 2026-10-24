@@ -1,0 +1,6 @@
+-- A result count guessed before the callee type is known must not silently drop
+-- results: Luau would return 7, 8 here.
+local function call2(f) return f() end
+local r1, r2 = call2(function() return 7, 8 end)
+print(r1, r2)
+-- expect-error: 3:32: the number of values this call returns was needed before its function type was known (assumed 1, it returns 2)

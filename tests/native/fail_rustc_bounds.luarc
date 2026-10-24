@@ -1,0 +1,3 @@
+local fx = require("rust:fixture")
+print(fx.largest({"a", "b"}))
+-- expect-error: 2:10: the Rust compiler rejected this use of native item 'largest'

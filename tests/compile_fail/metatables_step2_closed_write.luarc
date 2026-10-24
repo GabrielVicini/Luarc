@@ -1,0 +1,3 @@
+local child: {own: number} = setmetatable({own = 1}, {__index = {x = 7}})
+child.x = 9
+-- expect-error: 2:7: field 'x' does not exist on record type {own}

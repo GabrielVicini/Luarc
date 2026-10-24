@@ -1,0 +1,3 @@
+local t=table.pack(1,nil,3)
+next(t)
+-- expect-error: 2:1: next on a nil-preserving array is unsupported

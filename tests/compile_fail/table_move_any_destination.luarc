@@ -1,0 +1,4 @@
+-- expect-error: 4:25: table.move destination requires a runtime table
+local source={1}
+local destination:any={}
+table.move(source,1,1,1,destination)

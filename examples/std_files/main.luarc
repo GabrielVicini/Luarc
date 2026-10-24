@@ -1,0 +1,4 @@
+local std = require("rust:std")
+local text = std.fs.read_to_string("message.txt")
+print(text)
+std.fs.write("copy.txt", text)

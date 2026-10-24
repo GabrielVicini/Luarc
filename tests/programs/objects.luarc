@@ -1,0 +1,66 @@
+-- records with methods (statically resolvable), aliasing, nested records
+local function newAccount(owner: string, balance: number)
+    local acct = {owner = owner, balance = balance, history = {}}
+    function acct:deposit(amount: number)
+        self.balance += amount
+        table.insert(self.history, amount)
+    end
+    function acct:report(): string
+        return `{self.owner}: {self.balance} ({#self.history} ops)`
+    end
+    return acct
+end
+
+local a = newAccount("ann", 10)
+a:deposit(5)
+a:deposit(7)
+local alias = a
+alias:deposit(1)
+print(a:report(), a.balance == alias.balance)
+
+-- record built incrementally and passed around
+local cfg = {}
+cfg.name = "demo"
+cfg.size = 3
+local function describe(c)
+    return c.name .. "/" .. c.size
+end
+print(describe(cfg))
+
+-- linked list with an optional recursive field
+type Node = {value: number, next: Node?}
+local head: Node? = nil
+for i = 1, 4 do
+    head = {value = i, next = head}
+end
+local sum = 0
+local node = head
+while node do
+    sum += node.value
+    node = node.next
+end
+print("list sum", sum)
+
+-- record of functions (module-like table)
+local ops = {
+    add = function(x: number, y: number) return x + y end,
+    mul = function(x: number, y: number) return x * y end,
+}
+print(ops.add(2, 3), ops.mul(2, 3))
+
+-- if-expressions
+local n = 7
+local kind = if n % 2 == 0 then "even" elseif n > 5 then "big odd" else "small odd"
+print(kind)
+
+-- array of records, sort-free max search
+local people = {
+    {name = "a", age = 30},
+    {name = "b", age = 41},
+    {name = "c", age = 25},
+}
+local oldest = people[1]
+for _, p in ipairs(people) do
+    if p.age > oldest.age then oldest = p end
+end
+print("oldest", oldest.name)

@@ -1,0 +1,73 @@
+-- two closures share one mutable cell
+local function makePair()
+    local value = 0
+    local function inc() value += 1 end
+    local function get() return value end
+    return inc, get
+end
+local inc, get = makePair()
+inc(); inc(); inc()
+print("shared", get())
+
+-- independent instances
+local inc2, get2 = makePair()
+inc2()
+print("independent", get(), get2())
+
+-- self recursion (static function) and recursion through a capturing closure
+local function fib(n: number): number
+    if n < 2 then return n end
+    return fib(n - 1) + fib(n - 2)
+end
+print("fib", fib(20))
+
+local base = 100
+local function sumTo(n)
+    if n == 0 then return base end
+    return n + sumTo(n - 1)
+end
+print("sumTo", sumTo(10))
+
+-- mutual recursion through a forward-declared local
+local isOdd
+local function isEven(n)
+    if n == 0 then return true end
+    return isOdd(n - 1)
+end
+isOdd = function(n)
+    if n == 0 then return false end
+    return isEven(n - 1)
+end
+print("even/odd", isEven(10), isOdd(7))
+
+-- functions as values, identity survives assignment
+local f = fib
+local g = f
+print("identity", f == g, f == fib, fib(10) == g(10))
+
+-- higher-order functions
+local function map(t, fn)
+    local out = {}
+    for _, v in ipairs(t) do
+        table.insert(out, fn(v))
+    end
+    return out
+end
+local doubled = map({1, 2, 3}, function(x) return x * 2 end)
+print(table.concat(doubled, ","))
+
+-- closure capturing a parameter that it mutates
+local function accumulator(start)
+    return function(d)
+        start += d
+        return start
+    end
+end
+local acc = accumulator(10)
+acc(5)
+print("acc", acc(1))
+
+-- anonymous function returning multiple values
+local swap = function(a, b) return b, a end
+local p, q = swap(1, 2)
+print(p, q)

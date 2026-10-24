@@ -1,0 +1,99 @@
+-- string.gsub (template, table and function replacements) and string.gmatch,
+-- compared against Luau 0.743: its scanning rules are those of Lua 5.1.
+local function show(s: string, n: number)
+    print(s, n)
+end
+
+-- templates
+show(string.gsub("hello world", "o", "0"))
+show(string.gsub("hello world", "o", "0", 1))
+show(string.gsub("hello world", "(%w+)", "<%1>"))
+show(string.gsub("hello world", "(%w+) (%w+)", "%2 %1"))
+show(string.gsub("abc", "b", "%0%0"))
+show(string.gsub("abc", "b", "%%"))
+show(string.gsub("abc", "()b", "%1"))
+show(string.gsub("abc", "b", "x", 0))
+show(string.gsub("abc", "b", "x", -1))
+show(string.gsub("abc", "b", "x", 1.9))
+show(("a.b.c"):gsub("%.", "/"))
+
+-- empty matches and anchors
+show(string.gsub("abc", "%a*", "-"))
+show(string.gsub("abc def", "%a*", "-"))
+show(string.gsub("hello", "", "-"))
+show(string.gsub("aaa", "^a", "X"))
+show(string.gsub("abc", "^", ">"))
+show(string.gsub("", "x*", "-"))
+
+-- table replacements: a missing key keeps the match
+local escapes: { [string]: string } = { ["<"] = "&lt;", [">"] = "&gt;" }
+show(string.gsub("<a> & <b>", "[<>]", escapes))
+local other: { [string]: string } = { ["c"] = "C" }
+show(string.gsub("abc", "b", other))
+local names: { [string]: string } = { ["name"] = "World" }
+show(string.gsub("Hello $name, bye $other", "%$(%w+)", names))
+
+-- function replacements: nil keeps the match
+show(string.gsub("abc", "%w", function(c) return c:upper() end))
+show(string.gsub("abc", "%w", function(c)
+    if c == "b" then
+        return nil
+    end
+    return "x"
+end))
+show(string.gsub("k1=v1, k2=v2", "(%w+)=(%w+)", function(k, v) return v .. "=" .. k end))
+show(string.gsub("abc", "()", function(p) return tostring(p) end))
+local count = 0
+show(string.gsub("a b c", "%a", function(c)
+    count += 1
+    return c .. count
+end))
+
+-- errors
+print(pcall(function() return (string.gsub("abc", "(b)", "%1%1")) end))
+local tpl = "%" .. "2"
+print(pcall(function() return (string.gsub("abc", "(b)", tpl)) end))
+
+-- gmatch
+local words = {}
+for w in string.gmatch("one two  three", "%a+") do
+    table.insert(words, w)
+end
+print(table.concat(words, ","))
+for k, v in string.gmatch("k1=v1, k2=v2", "(%w+)=(%w+)") do
+    print(k, v)
+end
+for w in string.gmatch("abc", "%a*") do
+    print("[" .. w .. "]")
+end
+for w in ("x y z"):gmatch("%a") do
+    print(w)
+end
+for p in string.gmatch("abc", "()") do
+    print(p)
+end
+for a in string.gmatch("aaa", "^a") do
+    print("never", a)
+end
+for a in string.gmatch("^a^a", "^a") do
+    print(a)
+end
+local total = 0
+for n in string.gmatch("10 20 30 x 40", "%d+") do
+    if n == "30" then
+        continue
+    end
+    total += tonumber(n) or 0
+end
+print(total)
+for n in string.gmatch("1 2 3 4", "%d") do
+    if n == "3" then
+        break
+    end
+    print(n)
+end
+print(pcall(function()
+    for a in string.gmatch("abc", "(") do
+        print(a)
+    end
+end))

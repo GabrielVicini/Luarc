@@ -1,0 +1,18 @@
+-- error/pcall: messages carry file:line, pcall returns false + message.
+print(pcall(function() error("boom") end))
+print(pcall(function() return 5 end))
+local ok, msg = pcall(function() error("x" .. 1) end)
+print(ok, msg)
+local function thrower(n: number): number
+  if n > 2 then error("too big: " .. n) end
+  return n
+end
+print(pcall(function() return thrower(1) end))
+print(pcall(function() return thrower(3) end))
+print(pcall(function() assert(false, "assert msg") end))
+print(pcall(function() assert(1 == 2) end))
+local ok2, inner = pcall(function()
+  local ok3, m = pcall(function() error("nested") end)
+  return m
+end)
+print(ok2, inner)

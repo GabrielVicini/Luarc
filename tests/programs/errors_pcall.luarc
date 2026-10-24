@@ -1,0 +1,55 @@
+local function risky(n: number): number
+    if n < 0 then
+        error("negative input: " .. n)
+    end
+    return n * 2
+end
+
+local ok, res = pcall(function() return risky(4) end)
+if ok then
+    print("ok", res + 1)
+end
+
+local ok2, err = pcall(function() return risky(-1) end)
+if not ok2 then
+    print("caught", err)
+end
+
+-- runtime errors become catchable language errors
+local ok3, e3 = pcall(function()
+    local t = {1, 2, 3}
+    t[10] = 5
+end)
+print(ok3, e3)
+
+local ok4, e4 = pcall(function()
+    local m = {}
+    m["k"] = 1
+    return m["missing"] + 1
+end)
+print(ok4, e4)
+
+local ok5, e5 = pcall(function()
+    assert(1 == 2, "custom message")
+end)
+print(ok5, e5)
+
+local ok6, e6 = pcall(function()
+    assert(false)
+end)
+print(ok6, e6)
+
+-- nested pcall; error values are converted with tostring
+local outer_ok, outer = pcall(function()
+    local inner_ok, inner = pcall(function() error(42) end)
+    return tostring(inner_ok) .. " " .. tostring(inner)
+end)
+print(outer_ok, outer)
+
+local okf, ef = pcall(function() return string.format("%d", 1.5) end) -- truncates
+print(okf, ef)
+
+print("done")
+error("fatal: uncaught")
+-- expect-exit: 1
+-- expect-stderr: luarc runtime error: errors_pcall.luarc:53: fatal: uncaught

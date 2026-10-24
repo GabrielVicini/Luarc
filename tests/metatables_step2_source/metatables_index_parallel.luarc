@@ -1,0 +1,3 @@
+local C = {}
+C.__index = C
+C.__index, C.x = C, 1

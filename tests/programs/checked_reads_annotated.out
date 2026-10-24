@@ -1,0 +1,9 @@
+true	nil
+nil	nil
+false	checked_reads_annotated.luarc:14: attempt to perform arithmetic on a nil value
+11
+1
+zero	zero
+one and a half	one and a half
+false	checked_reads_annotated.luarc:30: table index is NaN
+nil

@@ -1,0 +1,33 @@
+-- Result padding, loop scoping, divergence and optional boolean reads.
+-- Nil padding of missing results takes the destination's type.
+local function one() return 1 end
+local a, b = one()
+b = 5
+print(a, b)
+local function pair(): (number, string?) return one() end
+local p1, p2 = pair()
+print(p1, p2)
+-- `until` reads a body local; `continue` jumps to the condition
+local i = 0
+repeat
+  local j = i
+  i += 1
+  if j == 1 then continue end
+  do local j = 100 if j > 50 and i == 3 then continue end end
+until j >= 3
+print(i)
+-- a trailing `repeat ... until false` diverges
+local function g(): number
+  local k = 0
+  repeat k += 1 if k > 3 then return k end if k == 2 then continue end until false
+end
+print(g())
+-- `and` on a possibly absent boolean read is nil when the read is
+local arr = {true, false}
+local x = arr[1] and true
+local x2 = arr[2] and true
+local x3 = arr[3] and true
+print(x, x2, x3)
+local r = {}
+if #arr > 5 then r.flag = true end
+print(r.flag and false)

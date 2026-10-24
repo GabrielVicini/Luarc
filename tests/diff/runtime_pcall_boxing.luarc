@@ -1,0 +1,30 @@
+-- Runtime-table tostring uses the same Value conversion as an explicit any slot.
+local trigger = setmetatable({value=7}, {__metatable=false})
+print(getmetatable(trigger))
+local ok, err = pcall(function() error("sentinel-failure", 0) end)
+print(ok, tostring(err), string.find(tostring(err), "sentinel-failure", 1, true) ~= nil)
+local _, numberValue = pcall(function(): number return 7 end)
+local boxedNumber: any = numberValue
+print(type(boxedNumber), tostring(boxedNumber))
+local _, falseValue = pcall(function(): boolean return false end)
+local boxedFalse: any = falseValue
+print(type(boxedFalse), tostring(boxedFalse))
+local _, nilValue = pcall(function() return nil end)
+local boxedNil: any = nilValue
+print(type(boxedNil), tostring(boxedNil))
+local _, emptyValue = pcall(function(): string return "" end)
+local boxedEmpty: any = emptyValue
+print(type(boxedEmpty), tostring(boxedEmpty) == "")
+local _, protectedTable = pcall(function() return trigger end)
+local boxedTable: any = protectedTable
+if type(boxedTable) == "table" then
+    print(boxedTable.value, rawequal(boxedTable, trigger))
+else
+    error("expected protected table", 0)
+end
+local enabled = true
+local conditional: any = enabled and numberValue
+print(type(conditional), tostring(conditional))
+local disabled = false
+local conditionalFalse: any = disabled and numberValue
+print(type(conditionalFalse), tostring(conditionalFalse))

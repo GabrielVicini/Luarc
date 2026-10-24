@@ -1,0 +1,14 @@
+--!optimize 0
+local function make()
+    local key = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" .. "tail"
+    local t = {[key] = true}
+    t[key] = nil
+    return t
+end
+local t = make()
+local held = {}
+for i = 1, 100000 do held[i] = "hold" .. i end
+local key = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" .. "tail"
+local ok, result = pcall(function() return next(t, key) end)
+print("constant-concat", #held, ok, result)
+-- expect-error: 12:52: next continuation key has GC-sensitive identity that cannot be proven safe; use a numeric/boolean key, a literal/constant string, or a retained key from next on this table

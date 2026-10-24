@@ -1,0 +1,6 @@
+# luarc project manifest
+[package]
+name = "semver_demo"
+
+[dependencies.semver]
+version = "=1.0.28"

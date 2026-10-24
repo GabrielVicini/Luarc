@@ -1,0 +1,14 @@
+local function run()
+  local obj=setmetatable({value=7}, {__metatable=false})
+  local values=table.pack(obj, nil, 3)
+  assert(values.n == 3)
+  local v=values[1]
+  if type(v)=='table' then
+    assert(v.value == 7)
+    assert(rawequal(v,obj))
+    print('packed table',v.value,rawequal(v,obj),values.n,values[2],values[3])
+  else
+    error('expected table')
+  end
+end
+run()

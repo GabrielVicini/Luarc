@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+setmetatable({1, 2}, C)
+-- expect-error: 3:1: setmetatable does not support arrays or maps

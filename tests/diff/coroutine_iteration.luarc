@@ -1,0 +1,34 @@
+local co = coroutine.create(function()
+    local function iterator(_, previous)
+        if previous == nil then
+            coroutine.yield("iterator")
+            return 1
+        end
+        return nil
+    end
+    for key in iterator, nil, nil do
+        coroutine.yield("body", key)
+    end
+    return "done"
+end)
+print(coroutine.resume(co))
+print(coroutine.resume(co))
+print(coroutine.resume(co))
+
+local blocked = coroutine.create(function()
+    local function iterator() return nil end
+    local table = setmetatable({}, {
+        __iter = function()
+            print("factory", coroutine.isyieldable())
+            coroutine.yield("unreachable")
+            return iterator, nil, nil
+        end,
+    })
+    for _ in table do end
+end)
+print(coroutine.resume(blocked))
+
+local first = coroutine.create(function() end)
+local second = coroutine.create(function() end)
+local values = { [first] = "same" }
+print(values[first], values[second] == nil, first == first, first == second)

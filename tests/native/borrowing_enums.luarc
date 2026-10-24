@@ -1,0 +1,53 @@
+-- Enums that borrow are records of their variants, converted inside the call
+-- that uses them; generic arguments that only need a reference are lent, not
+-- consumed. Shaped like wgpu's create_bind_group / set_bind_group.
+local fx = require("rust:fixture")
+
+local world = fx.GpuBuffer.new("world", 64)
+local camera = fx.GpuBuffer.new("camera", 16)
+local sampler = fx.GpuSampler.new("nearest")
+
+-- a constructor returns a record you can inspect; the buffer is not consumed
+local function resource(binding: number, buffer: fx.GpuBuffer)
+    return { binding = binding, resource = fx.GpuResource.Buffer({ buffer = buffer, offset = 0, size = nil }) }
+end
+local r = fx.GpuResource.Buffer({ buffer = world, offset = 8, size = 4 })
+print(r.Buffer ~= nil, r.Sampler == nil, fx.describe_one(r))
+
+-- arrays of entries with borrowed resources, built in a helper and in place
+local group = fx.create_group({ label = "world", entries = {
+    resource(0, world), resource(1, camera),
+    { binding = 2, resource = fx.GpuResource.Sampler(sampler) },
+    { binding = 3, resource = fx.GpuResource.SamplerAt(sampler, 7) },
+    { binding = 4, resource = fx.GpuResource.Nothing },
+    { binding = 5, resource = fx.GpuResource.BufferArray({ { buffer = world, offset = 0, size = nil }, { buffer = camera, offset = 4, size = 8 } }) },
+    { binding = 6, resource = fx.GpuResource.SamplerArray({ sampler, fx.GpuSampler.new("linear") }) },
+} })
+print(group:summary())
+-- the borrowed objects are still usable afterwards
+print(world:name(), camera:name())
+
+-- the same entries table can be reused for several groups
+local entries = { resource(0, camera) }
+local g1 = fx.create_group({ label = "a", entries = entries })
+local g2 = fx.create_group({ label = "b", entries = entries })
+print(g1:summary(), g2:summary())
+
+-- returned from native code, a unit variant is a record too
+local n = fx.nothing_resource()
+print(n.Nothing, n.Buffer == nil, fx.describe_one(n))
+
+-- exactly one variant must be set
+print(pcall(function() return fx.describe_one({ Buffer = { buffer = world, offset = 0, size = nil }, Nothing = true }) end))
+print(pcall(function() return fx.describe_one({}) end))
+
+-- set_group<G> where Option<&GpuGroup>: From<G>: the group is lent each time
+local pass = fx.GpuPass.new()
+pass:set_group(0, group)
+pass:set_group(1, group)
+pass:set_group(2, g1)
+print(pass:log())
+print(group:summary())
+
+-- an enum borrowing only plain data stays a handle, so a builder can keep it
+print(fx.TextStyle.new():describe(), fx.TextStyle.new():family(fx.FontFamily.Serif):describe())

@@ -1,0 +1,5 @@
+after acyclic scope	0
+after cycles and a collection	0
+recursive result	9
+after recursive local function	0
+after churn	0	true

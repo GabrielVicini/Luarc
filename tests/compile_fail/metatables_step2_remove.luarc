@@ -1,0 +1,2 @@
+setmetatable({}, nil)
+-- expect-error: 1:18: removing a metatable is not supported in this step

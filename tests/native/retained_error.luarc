@@ -1,0 +1,14 @@
+-- An error raised by a retained callback when native code later calls it
+-- is a language error at the native call that ran it: catchable by
+-- pcall, and reported with its message when uncaught.
+local fx = require("rust:fixture")
+local bus = fx.Bus.new()
+print("before")
+bus:subscribe(function(v: integer) if v > 1 then error("bad value " .. v) end print("got", v) end)
+print(bus:emit(1))
+print(pcall(function() return bus:emit(2) end))
+print("after")
+bus:emit(3)
+print("not reached")
+-- expect-exit: 1
+-- expect-stderr: bad value 3

@@ -1,0 +1,6 @@
+# luarc project manifest
+[package]
+name = "regex_demo"
+
+[dependencies.regex]
+version = "=1.13.1"

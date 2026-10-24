@@ -1,0 +1,3 @@
+local mt = {}
+local function unused(v) mt.__index = v end
+-- expect-error: 1:12: setmetatable __index must have a statically known record type

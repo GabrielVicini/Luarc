@@ -1,0 +1,10 @@
+true	true	world@8+4
+world {0:world@0+64 1:camera@0+16 2:sampler nearest 3:sampler nearest#7 4:nothing 5:[world@0+64,camera@4+8] 6:samplers nearest+linear}
+world	camera
+a {0:camera@0+16}	b {0:camera@0+16}
+true	true	nothing
+false	borrowing_enums.luarc:41: GpuResource value has 2 variants set; exactly one is allowed
+false	borrowing_enums.luarc:42: GpuResource value has no variant set (set exactly one field, such as GpuResource.Variant(...))
+0=world {0:world@0+64 1:camera@0+16 2:sampler nearest 3:sampler nearest#7 4:nothing 5:[world@0+64,camera@4+8] 6:samplers nearest+linear}; 1=world {0:world@0+64 1:camera@0+16 2:sampler nearest 3:sampler nearest#7 4:nothing 5:[world@0+64,camera@4+8] 6:samplers nearest+linear}; 2=a {0:camera@0+16}
+world {0:world@0+64 1:camera@0+16 2:sampler nearest 3:sampler nearest#7 4:nothing 5:[world@0+64,camera@4+8] 6:samplers nearest+linear}
+font default	serif

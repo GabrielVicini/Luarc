@@ -1,0 +1,62 @@
+-- Patterns that are not written at the call. Constant locals give
+-- their captures like a literal; other patterns are exact wherever the call site
+-- uses only the values a pattern without captures gives.
+
+-- locals initialized with a literal and never reassigned
+local kv = "(%w+)=(%w+)"
+print(string.match("key=val", kv))
+print(string.find("key=val", kv))
+print(("a=b"):match(kv))
+print(("a=b"):find(kv))
+local p1, p2 = "(a)", "(b)"
+print(string.match("ab", p1), string.match("ab", p2), string.match("ab", (p1)))
+local pos = "()b()"
+print(string.find("abc", pos))
+print(string.match("abc", pos))
+local s1, e1, c1 = string.find("hello world", "(o)", 6)
+print(s1, e1, c1)
+local nested = "(%d+)%-(%d+)"
+local function parse(s: string): (number, number)
+    local a, b = string.match(s, nested)
+    return tonumber(a or "") or -1, tonumber(b or "") or -1
+end
+print(parse("10-20"), parse("x"))
+local function inner(): string
+    local ip = "x(%d)"
+    return string.match("x7", ip) or "none"
+end
+print(inner())
+local noCaps = "%a+"
+print(string.match("hi there", noCaps), string.find("hi there", noCaps, 3))
+-- escapes and sets are not captures
+local esc = "%((%w)%)"
+print(string.match("(z)", esc), string.match("[(]", "[(]"), string.match("a(b", "%("))
+local bal = "%b()"
+print(string.match("f(a(b))", bal))
+
+-- dynamic patterns: one value from `match`, positions from `find`
+local function dyn(): string
+    return "(%w+)=(%w+)"
+end
+local x = string.match("key=val", dyn())
+local i, j = string.find("key=val", dyn())
+local k = ("a=b"):match(dyn())
+print(x, i, j, k, (string.match("key=val", dyn())))
+local function one(): string
+    return "(%w+)"
+end
+print(string.match("key=val", one()))
+local a, b = string.match("key=val", one())
+print(a, b)
+print(pcall(function() return string.match("key=val", one()) end))
+local function h(pp: string): string?
+    return string.match("hi there", pp)
+end
+print(h("%a+"), h("t%a+"), h("(t)%a+"), h("zz"))
+local r = "(x)"
+r = "x"
+print(string.match("xyz", r), string.find("xyz", r))
+local function plainPat(): string
+    return "(x"
+end
+print(string.find("a(xb", plainPat(), 1, true))

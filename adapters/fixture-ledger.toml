@@ -1,0 +1,27 @@
+# Adapter for the test fixture crate: a consuming method, owner retention and
+# deterministic release. Shipped with luarc; validated against the fixture's
+# extracted signatures every time its API is (re)extracted.
+adapter = "fixture-ledger"
+adapter_version = 1
+crate = "fixture"
+
+# `Ledger::finish(self)` consumes the ledger. Every source alias observes the
+# consumed state afterwards; further calls raise a language error.
+[[consume]]
+type = "Ledger"
+method = "finish"
+
+# `Pool::checkout(&self) -> Lease`: a lease keeps its pool alive.
+[[retain_owner]]
+type = "Pool"
+method = "checkout"
+
+# `ledger:close()` drops the native ledger immediately.
+[[close]]
+type = "Ledger"
+method = "close"
+
+# Source-visible name for `Ledger::add_entry`.
+[[rename]]
+item = "Ledger.add_entry"
+name = "add"

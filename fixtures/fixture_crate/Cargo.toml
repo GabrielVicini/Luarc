@@ -1,0 +1,14 @@
+[package]
+name = "fixture"
+version = "0.3.0"
+edition = "2021"
+description = "Ordinary Rust crate used to test luarc's importer (no luarc-specific code)"
+publish = false
+
+[features]
+default = []
+extra = []
+
+[dependencies]
+
+[workspace]

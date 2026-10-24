@@ -1,0 +1,44 @@
+-- types inferred from later insertions, writes, calls and returns
+local names = {}
+local function add(n) table.insert(names, n) end
+add("x")
+add("y")
+print(#names, names[2]:upper())
+
+local scores = {}
+local function record(who, pts)
+    scores[who] = (scores[who] or 0) + pts
+end
+record("a", 3)
+record("a", 4)
+record("b", 1)
+print(scores.a, scores.b)
+
+-- parameter types flow from call sites
+local function twice(f, x)
+    return f(f(x))
+end
+print(twice(function(v) return v .. "!" end, "hi"))
+
+-- annotated aliases
+type Pair = {first: string, second: number}
+local function mk(a: string, b: number): Pair
+    return {first = a, second = b}
+end
+local pairs_list: {Pair} = {}
+table.insert(pairs_list, mk("k", 1))
+print(pairs_list[1].first, pairs_list[1].second)
+
+-- function-typed values
+local handlers: {[string]: (number) -> number} = {}
+handlers["sq"] = function(v) return v * v end
+local h = handlers["sq"]
+if h then
+    print("sq", h(9))
+end
+
+-- number keys in a map
+local sparse: {[number]: boolean} = {}
+sparse[1000] = true
+sparse[-1] = false
+print(sparse[1000], sparse[-1], sparse[5])

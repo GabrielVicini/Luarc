@@ -1,0 +1,8 @@
+local rebuilt = string.rep("x", 40) .. "tail"
+local t = {[rebuilt] = true}
+t[rebuilt] = nil
+local held = {}
+for i = 1, 100000 do held[i] = "hold" .. i end
+local query = string.rep("x", 40) .. "tail"
+next(t, query)
+-- expect-error: 7:9: next continuation key has GC-sensitive identity that cannot be proven safe; use a numeric/boolean key, a literal/constant string, or a retained key from next on this table

@@ -1,0 +1,36 @@
+-- Borrowed results are views of their owner: a `&mut Self` result can be a
+-- different same-typed object; owner mutation invalidates views.
+local fx = require("rust:fixture")
+
+local root = fx.Tree.new("root")
+local a = root:add("a")          -- &mut Tree: the new child, not the root
+local b = root:add("b")
+print(root:label(), root:count())
+
+-- `a` was created before root changed again (add "b"): it is no longer valid
+print(pcall(function() return a:label() end))
+
+-- a fresh view reaches the right child; mutation through a view keeps it valid
+local c = root:child_mut(0)
+c:rename("first")
+print(c:label(), root:label())
+local r = root:rename("ROOT")    -- &mut Self that really is the receiver
+print(r:label(), root:label())
+
+-- shared accessors: Option<&Tree> becomes an optional view
+local first = root:child(0)
+local missing = root:child(5)
+if first then print("child 0:", first:label()) end
+print("child 5:", missing)
+
+-- the owner is retained by its views, and clearing it invalidates them
+local kept = root:child(1)
+root:clear()
+print(pcall(function() return kept and kept:label() end))
+
+-- keyed lookups through a borrowed key
+local reg = fx.Registry.new()
+reg:insert("x", fx.Tree.new("from-registry"))
+local found = reg:get("x")
+print(found and found:label(), reg:get("nope"))
+print(b ~= nil)

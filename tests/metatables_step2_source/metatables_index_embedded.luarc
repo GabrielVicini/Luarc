@@ -1,0 +1,3 @@
+local C = {}
+C.__index = C
+local unused = {f = function() return {__index = C} end}

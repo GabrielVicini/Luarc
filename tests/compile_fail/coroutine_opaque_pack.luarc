@@ -1,0 +1,5 @@
+local function forward(...: any)
+    return coroutine.create(select(1, ...))
+end
+print(forward(function() end))
+-- expect-error: 2:29: coroutine.create/wrap requires a statically known function value

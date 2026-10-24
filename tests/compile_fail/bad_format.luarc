@@ -1,0 +1,2 @@
+print(string.format("%a", 255))
+-- expect-error: 1:21: unsupported format directive '%a'

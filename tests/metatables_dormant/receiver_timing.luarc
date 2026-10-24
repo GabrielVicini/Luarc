@@ -1,0 +1,17 @@
+local Class = {}
+Class.__index = Class
+function Class.new(x) return setmetatable({x = x}, Class) end
+function Class:get(a) print("get", self.x, a) return self.x end
+local obj = Class.new(7)
+local holder = {obj = obj}
+local function change() print("change") obj = Class.new(11) holder.obj = obj return 2 end
+local function receiver() print("receiver") return obj end
+print("name", obj:get(change()))
+obj = Class.new(7) holder.obj = obj
+print("paren", (obj):get(change()))
+obj = Class.new(7) holder.obj = obj
+print("field", holder.obj:get(change()))
+obj = Class.new(7) holder.obj = obj
+print("call", receiver():get(change()))
+obj = Class.new(7) holder.obj = obj
+print("dot", obj.get(obj, change()))

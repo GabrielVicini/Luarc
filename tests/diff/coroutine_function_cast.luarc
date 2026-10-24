@@ -1,0 +1,7 @@
+local function original(): number return 7 end
+local co = coroutine.create(function() return original end)
+local ok, value = coroutine.resume(co)
+print(ok, type(value))
+local recovered = value :: (() -> number)
+print(recovered())
+print(recovered == original)

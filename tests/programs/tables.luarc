@@ -1,0 +1,76 @@
+-- arrays
+local arr = {10, 20, 30}
+arr[4] = 40
+arr[#arr + 1] = 50
+print(#arr, arr[1], arr[5], arr[6])
+table.insert(arr, 1, 5)
+print(table.concat(arr, " "))
+print(table.remove(arr), table.remove(arr, 1), #arr)
+arr[#arr] = nil
+print(#arr, table.concat(arr, ","))
+
+-- iteration reads successive elements; appends during ipairs are visited
+local grow = {1, 2}
+local visited = 0
+for i, v in ipairs(grow) do
+    visited += 1
+    if i == 1 then table.insert(grow, 3) end
+end
+print("visited", visited)
+
+-- maps
+local counts = {}
+for _, w in ipairs({"a", "b", "a", "c", "a"}) do
+    counts[w] = (counts[w] or 0) + 1
+end
+print(counts["a"], counts.b, counts["zzz"])
+counts["b"] = nil
+local keys = 0
+for k, v in pairs(counts) do
+    keys += 1
+end
+print("keys", keys)
+
+local m: {[number]: string} = {}
+m[2] = "two"
+m[100] = "hundred"
+print(m[2], m[100], m[3])
+
+-- records
+local p = {x = 1, y = 2}
+p.x += 10
+print(p.x, p.y)
+
+-- shared identity and shallow clone
+local orig = {name = "orig", tags = {"t1"}}
+local alias = orig
+local copy = table.clone(orig)
+alias.name = "changed"
+table.insert(copy.tags, "t2")
+print(orig.name, copy.name, #orig.tags, orig == alias, orig == copy)
+
+-- table.create
+local zeros = table.create(3, 0)
+print(#zeros, zeros[3])
+local reserved = table.create(10)
+table.insert(reserved, "x")
+print(#reserved)
+local shared = table.create(2, {v = 1})
+shared[1].v = 99
+print(shared[2].v)
+
+-- nested structures
+local grid = {}
+for r = 1, 3 do
+    local row = {}
+    for c = 1, 3 do
+        table.insert(row, r * c)
+    end
+    table.insert(grid, row)
+end
+print(grid[2][3], grid[3][3])
+
+-- pairs over an array
+local s = 0
+for i, v in pairs({5, 6, 7}) do s += i * v end
+print("pairs-array", s)

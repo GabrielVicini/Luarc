@@ -1,0 +1,5 @@
+[package]
+name = "metatables-compile-fail"
+
+[dependencies.fixture]
+path = "../../fixtures/fixture_crate"

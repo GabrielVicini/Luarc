@@ -1,0 +1,2 @@
+local it = string.gmatch("abc", "b")
+-- expect-error: 1:19: string.gmatch can only be used directly in a 'for ... in' loop

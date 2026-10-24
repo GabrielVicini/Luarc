@@ -1,0 +1,3 @@
+local create = coroutine.create
+print(create)
+-- expect-error: 2:7: coroutine builtins require a direct call or an immutable unannotated local alias

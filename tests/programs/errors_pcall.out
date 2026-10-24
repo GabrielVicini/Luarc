@@ -1,0 +1,9 @@
+ok	9
+caught	errors_pcall.luarc:3: negative input: -1
+false	errors_pcall.luarc:21: array index 10 out of range for write (length 3); arrays must stay dense (holes are unsupported)
+false	errors_pcall.luarc:28: attempt to perform arithmetic on a nil value
+false	errors_pcall.luarc:33: custom message
+false	errors_pcall.luarc:38: assertion failed!
+true	false errors_pcall.luarc:44: 42
+true	1
+done

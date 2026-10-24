@@ -1,0 +1,2 @@
+local C = {}
+do C.__index = C end

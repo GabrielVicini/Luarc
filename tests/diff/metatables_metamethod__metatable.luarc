@@ -1,0 +1,9 @@
+local C = {}
+C.__index = C
+C.__metatable = 1
+setmetatable({}, C)
+local child = setmetatable({}, C)
+assert(getmetatable(child) == 1)
+local ok = pcall(function() setmetatable(child, {}) end)
+assert(not ok)
+print(getmetatable(child), ok)

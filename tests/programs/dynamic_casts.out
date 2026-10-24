@@ -1,0 +1,11 @@
+false	dynamic_casts.luarc:9: invalid cast: expected string, got number
+false	dynamic_casts.luarc:10: invalid cast: expected number, got string
+false	dynamic_casts.luarc:11: invalid cast: expected {string}, got table
+false	dynamic_casts.luarc:12: invalid cast: expected number, got nil
+false	dynamic_casts.luarc:13: invalid cast: expected string, got boolean
+false	dynamic_casts.luarc:14: invalid cast: expected boolean, got number
+5	s	3	true
+nil	5
+false	dynamic_casts.luarc:22: attempt to use a nil value
+set
+99	true

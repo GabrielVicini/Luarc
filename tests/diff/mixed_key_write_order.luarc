@@ -1,0 +1,57 @@
+local function keyNil(): any print("key-nil"); return nil end
+local function keyNan(): any print("key-nan"); return 0/0 end
+local function goodKey(): any print("key-good"); return "good" end
+local function value(label: string, result: number): number print(label); return result end
+local function core(text: string): string
+    local first = string.find(text, "attempt", 1, true)
+    if first ~= nil then return string.sub(text, first) end
+    return text
+end
+local m: {[any]: number} = {[false] = 2}
+local ok, err = pcall(function() m[keyNil()] = value("write-rhs-nil", 1) end)
+print("write-nil", ok)
+assert(not ok and string.find(tostring(err), "table index is nil", 1, true) ~= nil)
+ok, err = pcall(function() m[keyNan()] = value("write-rhs-nan", 1) end)
+print("write-nan", ok)
+assert(not ok and string.find(tostring(err), "table index is NaN", 1, true) ~= nil)
+ok, err = pcall(function()
+    local t: {[any]: number} = {[keyNil()] = value("ctor-rhs-nil", 1), [goodKey()] = value("unreached-ctor", 2)}
+    print(t[false])
+end)
+print("ctor-nil", ok)
+assert(not ok and string.find(tostring(err), "table index is nil", 1, true) ~= nil)
+ok, err = pcall(function()
+    local t: {[any]: number} = {[keyNan()] = value("ctor-rhs-nan", 1), [false] = 2}
+    print(t[false])
+end)
+print("ctor-nan", ok)
+assert(not ok and string.find(tostring(err), "table index is NaN", 1, true) ~= nil)
+ok, err = pcall(function() m[keyNil()], m[goodKey()] = value("multi-rhs-1", 1), value("multi-rhs-2", 2) end)
+print("multi-first-invalid", ok, m["good"])
+ok, err = pcall(function() m[goodKey()], m[keyNan()] = value("multi-rhs-3", 3), value("multi-rhs-4", 4) end)
+print("multi-last-invalid", ok, m["good"])
+m[goodKey()] = value("write-rhs-good", 7)
+print("write-good", m["good"])
+local t: {[any]: number} = {[goodKey()] = value("ctor-rhs-good", 8), [false] = 2}
+print("ctor-good", t["good"], t[false])
+ok, err = pcall(function() m[keyNil()] += value("compound-rhs-nil", 1) end)
+local message = core(tostring(err))
+assert(message == "attempt to perform arithmetic (add) on nil and number", message)
+print("compound-nil", ok, message)
+ok, err = pcall(function() m[keyNan()] += value("compound-rhs-nan", 1) end)
+message = core(tostring(err))
+assert(message == "attempt to perform arithmetic (add) on nil and number", message)
+print("compound-nan", ok, message)
+m[goodKey()] += value("compound-rhs-good", 2)
+print("compound-good", m["good"])
+
+local function mutate(): number print("compound-rhs-mutate"); m["good"] = 100; return 2 end
+m[goodKey()] += mutate()
+print("compound-old-value", m["good"] )
+ok, err = pcall(function() m.absent += value("compound-named-nil-rhs", 1) end)
+message = core(tostring(err))
+assert(message == "attempt to perform arithmetic (add) on nil and number", message)
+print("compound-named-nil", ok, message)
+local function mutateNamed(): number print("compound-named-rhs"); m.good = 100; return 2 end
+m.good += mutateNamed()
+print("compound-named-old-value", m.good)

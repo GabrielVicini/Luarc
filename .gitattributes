@@ -1,0 +1,2 @@
+tests/diff/crlf.luarc -text
+examples/std_files/message.txt text eol=lf

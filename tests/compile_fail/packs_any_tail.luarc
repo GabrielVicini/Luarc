@@ -1,0 +1,4 @@
+local function target(...: any) return select('#', ...) end
+local function forward(...: number?) return pcall(target, ...) end
+print(forward(1, nil, 3))
+-- expect-error: 2:45: type mismatch: expected any, found number

@@ -1,0 +1,9 @@
+shared	3
+independent	3	1
+fib	6765
+sumTo	155
+even/odd	true	true
+identity	true	true	true
+2,4,6
+acc	16
+2	1

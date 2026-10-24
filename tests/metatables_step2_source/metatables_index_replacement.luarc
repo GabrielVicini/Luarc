@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+setmetatable({}, C)
+C.__index = C

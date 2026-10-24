@@ -1,0 +1,9 @@
+true
+false
+invalid pattern caught:	true
+(\d{4})-(\d{2})-(\d{2})
+from <date> to <date>
+4	13
+true
+a\.b\*c
+ALPHA,GAMMA

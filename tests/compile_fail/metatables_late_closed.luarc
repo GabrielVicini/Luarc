@@ -1,0 +1,7 @@
+local C = {}
+C.__index = C
+local child = setmetatable({}, C)
+local function read(t: {x: number}) return t.x end
+print(read(child))
+child.y = 1
+-- expect-error: 6:7: field 'y' does not exist on record type {x}

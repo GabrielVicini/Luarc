@@ -1,0 +1,8 @@
+local counter = require("./lib/counter")
+local geo = require("./lib/geometry")
+local counter2 = require("./lib/counter")
+
+print(counter.next(), counter2.next(), counter == counter2)
+local v = geo.add(geo.vec(3, 0), geo.vec(0, 4))
+print(v.x, v.y, geo.len(v))
+print("calls so far", counter.next())

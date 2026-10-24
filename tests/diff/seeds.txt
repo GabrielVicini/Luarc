@@ -1,0 +1,6 @@
+# Seeds for luau_differential_generated (crates/luarc/tests/differential.rs).
+# One per line; '#' starts a comment. Add failing seeds here after minimizing them.
+1
+2
+3
+20261022

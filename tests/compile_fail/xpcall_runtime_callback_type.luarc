@@ -1,0 +1,7 @@
+-- expect-error: 5:17: runtime-table callback parameters must be unannotated dynamic values or known runtime tables
+local function make()
+ return function(value:number) return value end
+end
+local ok,method=xpcall(make,function(err)return err end)
+local object=setmetatable({}, {__call=method,__metatable=false})
+print(ok,object(3))

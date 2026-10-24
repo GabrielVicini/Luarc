@@ -1,0 +1,31 @@
+-- Casts out of `any` are checked at run time. Luau does not check `::`, so these
+-- programs are not in tests/diff: a wrong cast raises an error here.
+local box: any = 5
+local str: any = "s"
+local arr: any = { 1, 2, 3 }
+local nothing: any = nil
+local flag: any = true
+
+print(pcall(function() return box :: string end))
+print(pcall(function() return str :: number end))
+print(pcall(function() return arr :: { string } end))
+print(pcall(function() return nothing :: number end))
+print(pcall(function() return flag :: string end))
+print(pcall(function() return box :: boolean end))
+
+-- the right casts work, `T?` accepts nil
+print(box :: number, str :: string, #(arr :: { number }), flag :: boolean)
+print(nothing :: number?, box :: number?)
+
+-- dropping `nil` from an optional value is checked too
+local maybe: string? = nil
+print(pcall(function() return maybe :: string end))
+maybe = "set"
+print(maybe :: string)
+
+-- a table keeps its identity through any, and the cast type must match its element type
+local shared = { 10, 20 }
+local held: any = shared
+local back = held :: { number }
+back[1] = 99
+print(shared[1], back == shared)

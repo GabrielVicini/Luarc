@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+setmetatable(nil, C)
+-- expect-error: 3:14: bad argument #1 to 'setmetatable' (table expected, got nil) (value may be nil; check it with `if x ~= nil` first)

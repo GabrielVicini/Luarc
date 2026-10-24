@@ -1,0 +1,22 @@
+-- A native future borrowing an object that is only lent to a callback must not
+-- outlive the loan: the call is refused with a language error
+-- instead of aborting the process when the callback returns.
+local fx = require("rust:fixture")
+local root = fx.Tree.new("root")
+local v = {}
+local result = "none"
+function v:enter(node: fx.Tree, depth: number)
+    local ok, err = pcall(function()
+        local f = node:label_after(5)
+        task.spawn(function() result = await(f) end)
+        task.run_ready()
+    end)
+    print("in callback", ok, err)
+end
+print("walked", fx.walk(root, v))
+task.wait_idle()
+print("result", result)
+-- an owned object may be borrowed by its future
+task.spawn(function() result = await(root:label_after(5)) end)
+task.wait_idle()
+print("owned", result)

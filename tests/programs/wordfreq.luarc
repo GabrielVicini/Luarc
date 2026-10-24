@@ -1,0 +1,56 @@
+-- A small realistic program: word frequencies with string processing.
+local text = [[the quick brown fox jumps over the lazy dog
+The dog barks; the fox runs. A quick end.]]
+
+local function isLetter(b: number): boolean
+    return (b >= 65 and b <= 90) or (b >= 97 and b <= 122)
+end
+
+local function words(s: string): {string}
+    local out = {}
+    local current = ""
+    for i = 1, #s do
+        local b = s:byte(i)
+        if b ~= nil and isLetter(b) then
+            current ..= string.char(b)
+        elseif #current > 0 then
+            table.insert(out, current:lower())
+            current = ""
+        end
+    end
+    if #current > 0 then
+        table.insert(out, current:lower())
+    end
+    return out
+end
+
+local counts: {[string]: number} = {}
+local order = {}
+for _, w in ipairs(words(text)) do
+    if counts[w] == nil then
+        table.insert(order, w)
+        counts[w] = 0
+    end
+    counts[w] += 1
+end
+
+-- simple insertion sort by count desc, then alphabetically
+for i = 2, #order do
+    local j = i
+    while j > 1 do
+        local a, b = order[j - 1], order[j]
+        local ca, cb = counts[a] or 0, counts[b] or 0
+        if ca < cb or (ca == cb and a > b) then
+            order[j - 1], order[j] = b, a
+            j -= 1
+        else
+            break
+        end
+    end
+end
+
+for i = 1, 5 do
+    local w = order[i]
+    print(string.format("%s %d", w, counts[w] or 0))
+end
+print("distinct", #order)

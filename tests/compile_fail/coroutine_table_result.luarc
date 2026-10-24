@@ -1,0 +1,8 @@
+local function make() return { field = 7 } end
+local function read(value: any)
+    if type(value) == "table" then print(value.field) end
+end
+local co = coroutine.create(function() return make() end)
+local _, value = coroutine.resume(co)
+read(value)
+-- expect-error: 5:29: table narrowing from any requires runtime-table producers; a static table is manually boxed here

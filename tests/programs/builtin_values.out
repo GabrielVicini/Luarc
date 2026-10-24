@@ -1,0 +1,7 @@
+a
+a	1	true
+ABC
+2
+XYZ	q
+5
+false	builtin_values.luarc:17: boom

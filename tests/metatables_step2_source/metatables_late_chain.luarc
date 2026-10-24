@@ -1,0 +1,6 @@
+local C = {}
+C.__index = C
+local P = {}
+P.__index = P
+local child = setmetatable({}, C)
+setmetatable(C, P)

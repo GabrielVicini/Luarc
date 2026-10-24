@@ -1,0 +1,13 @@
+42
+6
+9
+true
+a:1 b:-2
+7	-1	0
+0	false
+vs[]
+WIDTH	480
+fs[WIDTH=640,HEIGHT=480] zero
+fs[SAMPLES=4]
+cs[N=1] zero
+max 5	unlimited	unlimited

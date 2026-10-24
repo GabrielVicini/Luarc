@@ -1,0 +1,6 @@
+local Parent = {}
+function Parent:get() return self.x end
+local a = setmetatable({x = 1}, {__index = Parent})
+local b = setmetatable({x = "s"}, {__index = Parent})
+print(a:get(), b:get())
+-- expect-error: 5:18: type mismatch: expected number, found string

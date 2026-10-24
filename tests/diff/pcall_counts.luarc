@@ -1,0 +1,43 @@
+-- Protected success/failure arity, including direct print and forwarding.
+local function empty() end
+local function one() return 7 end
+local function many(fail: boolean)
+  if fail then error('sentinel', 0) end
+  return 1, nil, 3
+end
+local function forward_empty() return pcall(empty) end
+local function forward_one() return pcall(one) end
+local function forward_many(fail: boolean) return pcall(many, fail) end
+print('empty', pcall(empty))
+print('one', pcall(one))
+print('many', pcall(many, false))
+print('failure', pcall(many, true))
+print('forward_empty', forward_empty())
+print('forward_one', forward_one())
+print('forward_many', forward_many(false))
+print('forward_failure', forward_many(true))
+assert(table.pack(pcall(empty)).n == 1)
+assert(table.pack(pcall(many, false)).n == 4)
+assert(table.pack(pcall(many, true)).n == 2)
+assert(table.pack(forward_empty()).n == 1)
+assert(table.pack(forward_many(false)).n == 4)
+assert(table.pack(forward_many(true)).n == 2)
+local function optional(fail: boolean): number?
+  if fail then error('optional sentinel', 0) end
+  return nil
+end
+local ok, value = pcall(optional, false)
+if ok then
+  assert(value == nil)
+  print('optional', value == nil)
+else
+  error(tostring(value))
+end
+local failed, message = pcall(optional, true)
+if failed then
+  error('expected failure')
+else
+  assert(tostring(message) == 'optional sentinel')
+  print('optional failure', tostring(message))
+end
+print('pcall counts: ok')

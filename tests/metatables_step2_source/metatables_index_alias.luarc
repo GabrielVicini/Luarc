@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+local Alias = C
+Alias.__index = C

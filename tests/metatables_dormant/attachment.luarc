@@ -1,0 +1,25 @@
+local A = {}
+A.__index = A
+A.x = 7
+function A:get() return self.x end
+local B = {}
+B.__index = B
+B.x = 8
+function B:get() return self.x end
+local child = {}
+local alias = child
+local plain = {}
+local function read(t): number? return t.x end
+print("unattached", read(child), read(plain))
+local function first() print("first", child.x) return child end
+local function extra() print("extra", child.x) A.x = 9 return 1, 2 end
+print("attach", setmetatable(first(), A, extra()) == child)
+print("attached", alias:get(), plain.x)
+print("reattach", setmetatable(child, B) == alias, alias:get())
+local function keep(t) return function() return read(t) end end
+local saved = keep(alias)
+B.x = -3
+print("closure", saved())
+local holder = {child}
+local map = {["child"] = child}
+print("containers", holder[1]:get(), map["child"]:get())

@@ -1,0 +1,2 @@
+local child = setmetatable({}, {__index = 1})
+-- expect-error: 1:32: setmetatable __index must have a statically known record type

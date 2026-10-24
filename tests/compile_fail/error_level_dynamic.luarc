@@ -1,0 +1,3 @@
+local n = 2
+error("x", n)
+-- expect-error: 2:12: the level of error() must be a number literal (0, 1 or 2)

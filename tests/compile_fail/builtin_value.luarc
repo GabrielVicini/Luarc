@@ -1,0 +1,3 @@
+local t = {}
+t.f = print
+-- expect-error: 2:7: cannot infer the signature of builtin 'print' used as a value

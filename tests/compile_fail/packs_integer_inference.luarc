@@ -1,0 +1,3 @@
+local value: integer = select(1, 2, 3)
+print(value)
+-- expect-error: 1:24: a value of type integer cannot be converted to 'any'

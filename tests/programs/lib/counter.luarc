@@ -1,0 +1,15 @@
+-- module with private state: initialized once, value cached
+local M = {}
+local count = 0
+print("counter module initialized")
+
+function M.next()
+    count += 1
+    return count
+end
+
+function M.reset()
+    count = 0
+end
+
+return M

@@ -1,0 +1,62 @@
+local function divmod(a, b)
+    return a // b, a % b
+end
+local q, r = divmod(17, 5)
+print(q, r)
+print(divmod(9, 4))          -- expands at the end of an argument list
+print(divmod(9, 4), "end")   -- truncated to one value elsewhere
+local a, b, c = divmod(1, 1)
+print(a, b, c)
+local t = {divmod(7, 2)}
+print(#t)
+local only = (divmod(7, 2))
+print(only)
+
+local function maybe(flag)
+    if flag then
+        return "yes"
+    end
+    return nil
+end
+local v = maybe(true)
+if v ~= nil then
+    print("narrowed", v:upper())
+end
+local w = maybe(false)
+print("w is", w, w == nil)
+print("default", w or "fallback")
+
+local function find(list, target)
+    for i, x in ipairs(list) do
+        if x == target then return i end
+    end
+    return nil
+end
+local idx = find({"a", "b", "c"}, "c")
+if not idx then
+    print("missing")
+    return
+end
+print("found at", idx + 1)
+
+-- optional parameter
+local function greet(name: string?)
+    local n = name or "world"
+    return "hello " .. n
+end
+print(greet(), greet("luau"))
+
+-- and/or return operands; only nil and false are falsey
+print(nil or 0, false or true, 0 and "zero-truthy", "" and "empty-truthy")
+local flag = true
+print(flag and "on" or "off", (not flag) and "on" or "off")
+print(1 and nil)
+
+-- late-initialized local
+local late
+if idx > 2 then late = "set" end
+print(late)
+
+-- assert returns its value
+local checked = assert(maybe(true), "must exist")
+print(checked)

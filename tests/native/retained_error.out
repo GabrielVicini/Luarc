@@ -1,0 +1,5 @@
+before
+got	1
+1
+false	retained_error.luarc:7: bad value 2
+after

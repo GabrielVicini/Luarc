@@ -1,0 +1,5 @@
+local C = {}
+C.__index = C
+C.__add = 1
+setmetatable({}, C)
+-- expect-error: 4:1: metamethod '__add' is not supported in this step

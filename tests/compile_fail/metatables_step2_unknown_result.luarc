@@ -1,0 +1,3 @@
+local child = setmetatable({}, {})
+print(child:missing())
+-- expect-error: 1:28: cannot determine how many values this call returns here; annotate the function's return type

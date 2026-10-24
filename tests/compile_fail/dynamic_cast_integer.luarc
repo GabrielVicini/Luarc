@@ -1,0 +1,3 @@
+local a: any = 1
+local n = a :: integer
+-- expect-error: 2:16: cannot cast 'any' to integer

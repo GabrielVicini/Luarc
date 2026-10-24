@@ -1,0 +1,2 @@
+setmetatable({}, {1})
+-- expect-error: 1:1: setmetatable does not support arrays or maps

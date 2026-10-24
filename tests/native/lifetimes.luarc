@@ -1,0 +1,90 @@
+local fx = require("rust:fixture")
+
+local function try(f: () -> ())
+    local ok, err = pcall(f)
+    if not ok then print("error:", err) else print("ok") end
+end
+
+-- numeric conversion boundaries
+try(function() fx.to_u8(256) end)
+try(function() fx.to_u8(-1) end)
+try(function() fx.to_u8(1.5) end)
+try(function() fx.to_u8(0 / 0) end)
+print(fx.to_u8(255), fx.max_safe(), fx.big_number())
+try(function() print(fx.big_number(), tonumber(fx.big_number())) end)
+try(function() fx.halve(1e300) end)
+print(fx.halve(math.huge))
+-- UTF-8 validation (no silent replacement)
+try(function() fx.greet("bad\xff") end)
+print(fx.count_bytes("bad\xff"))
+try(function() fx.fixed_pair({1, 2, 3}) end)
+
+-- handle aliasing: assignment shares the native object
+local c1 = fx.Counter.new()
+local c2 = c1
+c2:add(5)
+print("alias", c1:get(), c1 == c2)
+local other = fx.Counter.new()
+print("distinct", c1 == other)
+
+-- reentrancy: the counter is mutably borrowed while its callback runs
+local seen = 0
+try(function()
+    c1:visit(function(i) seen += c1:get() end)
+end)
+-- after the error the object is usable again
+c1:add(1)
+print("after reentrancy", c1:get(), seen)
+
+-- callback errors propagate as catchable errors (no native unwinding issues)
+try(function()
+    fx.apply_twice(function(x)
+        if x > 2 then error("callback failed at " .. x) end
+        return x * 2
+    end, 2)
+end)
+
+-- consuming adapter: every alias observes the terminal state
+local ledger = fx.Ledger.open("books")
+ledger:add(10)
+ledger:add(5)
+local same = ledger
+local receipt = ledger:finish()
+print(receipt:summary(), receipt.total, fx.live_ledgers())
+try(function() print(same:total()) end)
+try(function() ledger:finish() end)
+print(tostring(ledger))
+
+-- deterministic release
+local l2 = fx.Ledger.open("tmp")
+print("ledgers live", fx.live_ledgers())
+l2:close()
+print("after close", fx.live_ledgers())
+try(function() l2:add(1) end)
+l2:close() -- closing twice is allowed
+
+-- owner retention: a lease keeps its pool alive
+local lease
+do
+    local pool = fx.Pool.new()
+    lease = pool:checkout()
+end
+if lease then print("pools live while leased", fx.live_pools(), lease:id()) end
+lease = nil
+print("pools live after lease dropped", fx.live_pools())
+
+-- cleanup: acyclic temporaries and error paths release native resources
+for i = 1, 5 do
+    local t = fx.Tracked.new("t" .. i)
+end
+print("tracked after loop", fx.live_tracked())
+try(function() fx.tracked_then_fail("x") end)
+print("tracked after error", fx.live_tracked())
+
+-- callbacks are not retained after the call returns
+do
+    local res = fx.Tracked.new("captured")
+    fx.call_n(2, function() local _ = res:name() end)
+    print("tracked during scope", fx.live_tracked())
+end
+print("tracked after scope", fx.live_tracked())

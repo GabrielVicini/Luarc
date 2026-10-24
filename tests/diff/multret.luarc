@@ -1,0 +1,18 @@
+-- Multiple returns: adjustment, truncation with parentheses, forwarding through parameters.
+local function two() return 1, 2 end
+local function three() return "a", "b", "c" end
+local a, b, c = two()
+print(a, b, c)
+print(two(), "end")
+print((two()))
+local x, y = three()
+print(x, y)
+local t = {two()}
+print(#t)
+local t2 = {two(), 10}
+print(#t2, t2[1], t2[2])
+local function call(f: () -> (number, number)) return f() end
+local p, q = call(two)
+print(p, q)
+local function pass(n: number) return n, n * 2 end
+print(pass(pass(3)))

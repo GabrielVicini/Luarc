@@ -1,0 +1,5 @@
+-- expect-error: 0:0: tables with statically tracked nested-table data cannot be manually boxed into any
+local trigger = setmetatable({}, {__metatable=false})
+local _, source = pcall(function() return {child={value=7}} end)
+local boxed: any = source
+print(type(boxed))

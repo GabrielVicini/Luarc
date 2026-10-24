@@ -1,0 +1,6 @@
+local parent = {x = 5}
+function parent:get() return self.x end
+local middle = setmetatable({y = 6}, {__index = parent})
+local child = setmetatable({x = 7}, {__index = middle})
+print(child:get(), child.get(child), middle:get())
+-- expect-error: 5:45: cyclic static record parent types are not supported

@@ -1,0 +1,83 @@
+-- Variadic functions: `...` with select, print, table constructors, forwarding.
+local function count(...: number): number
+  return select("#", ...)
+end
+print(count(), count(1), count(1, 2, 3))
+
+local function sum(...: number): number
+  local t = {...}
+  local s = 0
+  for _, v in ipairs(t) do s += v end
+  return s
+end
+print(sum(), sum(1, 2, 3), sum(10, 20))
+
+-- fixed parameters before `...`
+local function tagged(tag: string, ...: number)
+  print(tag, ...)
+end
+tagged("none")
+tagged("two", 1, 2)
+
+-- `...` as single values and adjusted to a fixed count
+local function firsts(...: number)
+  local a = ...
+  local x, y, z = ...
+  print(a, x, y, z)
+end
+firsts()
+firsts(7)
+firsts(7, 8, 9, 10)
+
+-- select(i, ...) as a value list and as single values
+local function pick(i: number, ...: string)
+  print(select(i, ...))
+  local s = select(i, ...)
+  print(s)
+end
+pick(1, "a", "b", "c")
+pick(2, "a", "b", "c")
+pick(-1, "a", "b", "c")
+pick(4, "a", "b")
+
+-- forwarding to fixed and variadic functions
+local function add3(a: number?, b: number?, c: number?): number
+  return (a or 0) + (b or 0) + (c or 0)
+end
+local function fwd(...: number): number
+  return add3(...)
+end
+print(fwd(1), fwd(1, 2), fwd(1, 2, 3, 4))
+local function fwd2(...: number): number
+  return sum(100, ...)
+end
+print(fwd2(), fwd2(1, 2))
+local function fwd3(...: number): number
+  return count(select(2, ...))
+end
+print(fwd3(1, 2, 3), fwd3(5))
+
+-- extra arguments from a multi-result call
+local function two(): (number, number) return 4, 5 end
+print(count(two()), sum(1, two()))
+
+-- nil values count and print as nil
+local function show(...: number?)
+  print(select("#", ...), ...)
+end
+show(nil, 2, nil)
+
+-- a variadic closure stored in a table and called through it
+local ops = {}
+ops.join = function(sep: string, ...: string): string
+  return table.concat({...}, sep)
+end
+print(ops.join("-", "x", "y", "z"), ops.join(","))
+
+-- errors
+local function nth(n: number, ...: number): number?
+  local v = select(n, ...)
+  return v
+end
+print(pcall(function() return nth(0, 1) end))
+print(pcall(function() return nth(-3, 1) end))

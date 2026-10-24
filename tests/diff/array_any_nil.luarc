@@ -1,0 +1,39 @@
+-- Any array nil slots use Luau's allocated boundary, not Rust Vec length.
+local function dump(label: string, a: {any})
+    print(label, #a, a[1], a[2], a[3], a[4], a[5], a[6])
+    local count = 0
+    for _ in ipairs(a) do count += 1 end
+    print("ipairs", count)
+    print("unpack", table.unpack(a, 1, 6))
+end
+local a: {any} = {1, nil, 3, nil, 5, nil}
+dump("literal", a)
+a[5] = nil
+dump("hidden", a)
+local nine: any = 9
+table.insert(a, nine)
+local missing: any = nil
+table.insert(a, missing)
+local seven: any = 7
+table.insert(a, seven)
+dump("append", a)
+local eight: any = 8
+table.insert(a, 2, eight)
+dump("insert", a)
+print("remove", table.remove(a, 3), table.remove(a))
+dump("removed", a)
+table.sort(a, function(x: any, y: any): boolean return x < y end)
+dump("sorted", a)
+local b = table.clone(a)
+b[3] = nil
+dump("clone", b)
+dump("original", a)
+local m: {[string]: any} = {}
+m["a"] = 1
+m["b"] = nil
+m["c"] = 3
+m["a"] = nil
+local count = 0
+for _ in pairs(m) do count += 1 end
+print("map", count, m["a"] == nil, m["b"] == nil, m["c"])
+print("remove-outside", table.remove(a, 0), table.remove(a, -1), table.remove(a, 0.9), table.remove(a, 99), table.remove(a, 99.9), table.remove(a, 0/0), table.remove(a, 1/0), table.remove(a, -1/0), #a)

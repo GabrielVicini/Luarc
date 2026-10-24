@@ -1,0 +1,2 @@
+local child = setmetatable({}, {__index = {}, __call = 1})
+-- expect-error: 1:28: metamethod '__call' is not supported in this step

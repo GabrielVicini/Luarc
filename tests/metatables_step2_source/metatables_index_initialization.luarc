@@ -1,0 +1,2 @@
+local C = {x = 1}
+C.__index = C

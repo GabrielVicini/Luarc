@@ -1,0 +1,111 @@
+-- A call giving zero or several values as the last argument of a builtin passes
+-- all its values.
+
+local function two(): (number, number)
+    return 1, 2
+end
+local function none() end
+local function strpos(): (string, number, number)
+    return "hello world", 2, 5
+end
+
+-- math, fixed and variadic arity
+print(math.atan2(two()), math.max(two()), math.min(two()), math.max(5, two()), math.max(5, 7, none()))
+print(math.max(two(), two()), math.max(1, (two())), math.fmod(two()), math.pow(two()))
+local fm, fe = math.frexp(123.456)
+print(math.ldexp(math.frexp(123.456)) == math.ldexp(fm, fe), math.ldexp(math.frexp(-0.1)), math.clamp(10, two()))
+print(math.lerp(10, two()), math.log(math.frexp(8)))
+
+-- strings, function and method forms
+print(string.sub(strpos()), string.sub("abcdef", two()), ("abcdef"):sub(two()))
+local s = "hello"
+print(s:sub(two()), s:rep(1), string.byte("abc", (two())))
+local function bytepos(): (string, number)
+    return "abc", 2
+end
+print(string.byte(bytepos()), string.char(72, 105), string.char(two()) == "\1\2")
+local function pat(): (string, number, boolean)
+    return "o", 6, true
+end
+print(string.find("hello world", pat()), ("hello world"):find(pat()))
+local function pat2(): (string, string)
+    return "key=val", "%w+"
+end
+print(string.match(pat2()))
+local function numbase(): (string, number)
+    return "ff", 16
+end
+print(tonumber(numbase()), string.rep("ab", (two())))
+
+-- string.format counts the expanded values against its directives
+local function pair(): (string, number)
+    return "x", 2.5
+end
+print(string.format("%d-%d", two()), string.format("%s=%.2f", pair()), string.format("[%d] %d %d", 1, two()))
+print(string.format("%d", (two())))
+
+-- assert takes `v, msg` from the call; a nil message is the default one
+local function check(ok: boolean): (boolean, string?)
+    if ok then
+        return true, nil
+    end
+    return false, "custom failure"
+end
+print((assert(check(true))))
+print(pcall(function() return (assert(check(false))) end))
+local function maybe(n: number): (number?, string?)
+    if n > 0 then
+        return n, nil
+    end
+    return nil, nil
+end
+print((assert(maybe(5))))
+print(pcall(function() return (assert(maybe(-1))) end))
+
+-- tables
+local t: {number} = {}
+local function tv(): ({number}, number)
+    return t, 7
+end
+table.insert(tv())
+local function posv(): (number, number)
+    return 1, 6
+end
+table.insert(t, posv())
+print(#t, t[1], t[2], table.concat(t, ","))
+local function sep(): (string, number, number)
+    return "+", 1, 2
+end
+print(table.concat(t, sep()))
+
+-- aliases go through the same path
+local mx = math.max
+local sub = string.sub
+print(mx(two()), sub(strpos()))
+
+-- evaluation order: earlier arguments run before the trailing call
+local trace = ""
+local n = 3
+local function a(): number
+    trace ..= "a"
+    n *= 10
+    return n
+end
+local function b(): (number, number)
+    trace ..= "b"
+    n += 1
+    return n, -n
+end
+print(math.max(a(), b()), n, trace)
+trace = ""
+print(string.format("%d %d %d", a(), b()), trace)
+
+-- an error inside the trailing call or the builtin is still caught
+local function bad(): (number, number)
+    error("boom")
+end
+print(pcall(function() return math.max(1, bad()) end))
+local function empty(): (number, number)
+    return 5, 1
+end
+print(pcall(function() return math.random(empty()) end))

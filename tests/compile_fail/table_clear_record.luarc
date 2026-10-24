@@ -1,0 +1,3 @@
+table.clear({x=1})
+-- expect-error: 1:7: table.clear() requires an array, map or runtime table
+

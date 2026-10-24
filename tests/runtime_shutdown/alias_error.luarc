@@ -1,0 +1,3 @@
+local function f() return "word" end
+local alias = f
+error("sentinel", 0)

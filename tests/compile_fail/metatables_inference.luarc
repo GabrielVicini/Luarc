@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+local function attach(t) return setmetatable(t, C) end
+-- expect-error: 3:33: cannot infer the record types passed to setmetatable here; add a type annotation

@@ -1,0 +1,31 @@
+-- Exact native integers: i64/u64 values are `integer`s and survive round trips
+-- above 2^53; `number` stays f64; conversions between them are explicit and checked.
+local fx = require("rust:fixture")
+
+local big = fx.big_number()
+print(big, fx.echo_u64(big) == big, type(big))
+local id = fx.echo_u64(big - 1)
+print(id, big - id, big // 2, big % 10)
+
+-- integral literals take the integer type where one is needed
+local flags = fx.set_flag(0, 63)
+print(flags, fx.set_flag(flags, 0) - flags)
+print(fx.add_i64(9007199254740993, 1), 9007199254740993 + 1)
+
+-- a number passed to an i64 parameter is converted exactly (or raises)
+local n: number = 2 ^ 40
+print(fx.add_i64(n, 0))
+print(pcall(function() return fx.add_i64(0.5, 0) end))
+
+-- explicit, checked conversions
+print(tonumber(fx.max_safe()), math.tointeger(3.0), math.tointeger(3.5))
+print(pcall(function() return tonumber(big) end))
+print(pcall(function() return big * big end))
+
+-- records with integer fields; integer keys
+local s = fx.next_stamp({id = 18446744073709551000, nanos = -1})
+print(s.id, s.nanos)
+local seen: {[integer]: string} = {}
+seen[big] = "big"
+print(seen[big], seen[big - 1])
+print(string.format("%d/%d", big, 7), "id=" .. big)

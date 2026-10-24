@@ -1,0 +1,22 @@
+print("hello", 42)
+
+local items = {}
+table.insert(items, "first")
+table.insert(items, "second")
+print(table.concat(items, ", "))
+
+local a = {x = 1}
+local b = a
+b.x += 5
+print(a.x) -- 6
+
+local function counter()
+    local n = 0
+    return function()
+        n += 1
+        return n
+    end
+end
+
+local next = counter()
+print(next(), next()) -- two values: 1 and 2

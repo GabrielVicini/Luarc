@@ -1,0 +1,8 @@
+true	3	2
+false	pcall_args.luarc:2: division by zero	nil
+forwarded	2
+true
+false	pcall_args.luarc:10: raised
+sum	4
+narrowed	3
+false	pcall_args.luarc:18: arg error

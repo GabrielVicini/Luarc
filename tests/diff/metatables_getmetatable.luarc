@@ -1,0 +1,5 @@
+local C = {}
+C.__index = C
+local child = setmetatable({}, C)
+getmetatable(child)
+print(rawequal(getmetatable(child), C))

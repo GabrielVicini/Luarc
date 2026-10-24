@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+local child = setmetatable({}, C)
+local copy = table.clone(child)

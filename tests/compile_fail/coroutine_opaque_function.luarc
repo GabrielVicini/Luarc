@@ -1,0 +1,4 @@
+local f: any = function() return 1 end
+local co = coroutine.create(f)
+print(co)
+-- expect-error: 2:29: coroutine.create/wrap requires a statically known function value

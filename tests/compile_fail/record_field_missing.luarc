@@ -1,0 +1,4 @@
+type P = {x: number}
+local p: P = {x = 1}
+print(p.y)
+-- expect-error: 3:9: field 'y' does not exist on record type P

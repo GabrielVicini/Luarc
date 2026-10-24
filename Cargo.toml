@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/luarc", "crates/luarc-runtime"]
+# The fixture crate and examples are independent projects consumed through `luarc add`.
+exclude = ["fixtures", "examples", "bench", "tests"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.80"

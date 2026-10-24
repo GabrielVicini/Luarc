@@ -1,0 +1,4 @@
+local function f()
+  return ...
+end
+-- expect-error: 2:10: cannot use '...' outside of a vararg function

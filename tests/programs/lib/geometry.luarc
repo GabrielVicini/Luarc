@@ -1,0 +1,20 @@
+local util = require("./counter")
+
+export type Vec = {x: number, y: number}
+
+local G = {}
+
+function G.vec(x: number, y: number): Vec
+    util.next()
+    return {x = x, y = y}
+end
+
+function G.add(a: Vec, b: Vec): Vec
+    return G.vec(a.x + b.x, a.y + b.y)
+end
+
+function G.len(v: Vec): number
+    return math.sqrt(v.x * v.x + v.y * v.y)
+end
+
+return G

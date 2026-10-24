@@ -1,0 +1,27 @@
+local Class = {}
+Class.__index = Class
+Class.x, Class.flag, Class.zero = 7, true, 5
+Class.negative, Class.empty = -9, "parent"
+Class.nan, Class.inf = 0/0, math.huge
+local child = {x = 1, flag = false, zero = 0, empty = ""}
+local alias = child
+print("before", child.negative)
+print("identity", setmetatable(child, Class) == child, alias == child)
+print("own", child.x, child.flag, child.zero, child.empty == "")
+print("fallback", child.negative, child["negative"], alias.negative)
+child.x = nil
+print("nil", child.x)
+child.x = 3
+print("write", child.x, Class.x)
+child.x = nil
+Class.x = 8
+print("live", child.x, alias.x)
+print("missing", child.absent)
+print("numbers", child.nan ~= child.nan, child.inf == math.huge)
+local function receiver() print("receiver") return child end
+local function rhs() print("rhs") Class.x = 20 return 2 end
+receiver().x += rhs()
+print("compound", child.x, Class.x)
+child.x = nil
+child.x, Class.x = 3, 4
+print("parallel", child.x, Class.x)

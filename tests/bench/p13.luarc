@@ -1,0 +1,52 @@
+-- Luau Impostor Detector: single-file semantic conformance stress test
+-- Intended for a current, full-featured standalone Luau runtime.
+-- No Roblox services, filesystem, or third-party libraries required.
+-- A compile-time rejection is itself a useful compatibility result.
+--!nocheck
+
+
+
+local passed = 0
+local failed = 0
+local failures = {}
+
+local function equal(actual, expected, label)
+    if actual ~= expected then
+        error(string.format("%s: expected %s, got %s", label or "comparison", tostring(expected), tostring(actual)), 2)
+    end
+end
+
+local function check(condition, label)
+    if not condition then
+        error(label or "assertion failed", 2)
+    end
+end
+
+local function probe(name, fn)
+    local ok, err = pcall(fn)
+    if ok then
+        passed += 1
+        print("[PASS] " .. name)
+    else
+        failed += 1
+        table.insert(failures, name .. " -> " .. tostring(err))
+        print("[FAIL] " .. name .. " -> " .. tostring(err))
+    end
+end
+
+probe("13 __eq, __lt and __le metamethods", function()
+    local mt = {
+        __eq = function(a, b) return a.value == b.value end,
+        __lt = function(a, b) return a.value < b.value end,
+        __le = function(a, b) return a.value <= b.value end,
+    }
+    local a = setmetatable({ value = 4 }, mt)
+    local b = setmetatable({ value = 4 }, mt)
+    local c = setmetatable({ value = 9 }, mt)
+    check(a == b, "equal-value objects should compare equal")
+    check(a ~= c, "different-value objects should compare unequal")
+    check(a < c, "__lt failed")
+    check(a <= b, "__le failed")
+    check(c > a, "reversed __lt failed")
+end)
+print(string.format("p13: %d passed, %d failed", passed, failed))

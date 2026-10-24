@@ -1,0 +1,105 @@
+do
+ local ok, key = pcall(function(): number? return nil end)
+ print("nil-number", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): number? return 7 end)
+ print("some-number", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): boolean? return false end)
+ print("false", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): boolean? return true end)
+ print("true", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): string? return "" end)
+ print("empty-string", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): number? error("sentinel", 0) end)
+ print("error", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): any return nil end)
+ print("nil-any", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): any return false end)
+ print("false-any", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function(): any return 9 end)
+ print("number-any", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+do
+ local ok, key = pcall(function() return nil end)
+ print("nil-only", ok, key, key == nil, nil == key, key ~= nil, nil ~= key, type(key), not key)
+ if key then print("branch", "truthy") else print("branch", "falsey") end
+ print("logic", key or "fallback", key and "rhs")
+ print("reverse",false or key,true and key,"lhs" or key,"lhs" and key,nil or key,nil and key)
+ local nil_alias=nil; print("alias",key==nil_alias,nil_alias==key,key~=nil_alias,nil_alias~=key)
+end
+local flag = true
+local ok, protected = pcall(function(): number? return nil end)
+local conditional = flag and protected
+print("conditional",conditional==nil,not conditional,conditional or "fallback",conditional and "rhs")
+local t = {[0+1]="a",[1+1]="b",[2+1]="c"}; t[5]=nil
+local success, next_key = pcall(function() return next(t,4) end)
+print("next",success,next_key,next_key==nil,type(next_key))
+local disabled = false
+local false_conditional = disabled and protected
+print('conditional-false',false_conditional==nil,not false_conditional,false_conditional or 'fallback',false_conditional and 'rhs')
+local trace = ''
+local function rhs() trace ..= 'r'; return 'rhs' end
+local _, missing = pcall(function(): number? return nil end)
+local _, zero = pcall(function(): number? return 0 end)
+print('order-nil',missing and rhs(),trace)
+print('order-or-nil',missing or rhs(),trace)
+print('order-and-zero',zero and rhs(),trace)
+print('order-or-zero',zero or rhs(),trace)
+local _, integer_nil = pcall(function(): integer? return nil end)
+local nil_alias = nil
+print('integer-nil',integer_nil==nil,nil==integer_nil,integer_nil==nil_alias,nil_alias==integer_nil,not integer_nil,type(integer_nil))
+if integer_nil then print('integer-branch','truthy') else print('integer-branch','falsey') end
+local integer_ok, integer_some = pcall(function(): integer? return 0 end)
+print('integer-some',integer_some==nil,nil==integer_some,integer_some~=nil,not integer_some,type(integer_some))
+if integer_ok then print('integer-logic',integer_some or 7, integer_some and 8) end

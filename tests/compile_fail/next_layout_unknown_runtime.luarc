@@ -1,0 +1,4 @@
+--!optimize 18446744073709551616
+-- expect-error: 3:24: table allocation depends on an unproven Luau optimization directive; use --!optimize 0, 1, or 2
+local t = setmetatable({[1]="a", [2]="b", [3]="c"}, {__tostring=function(): string return "t" end})
+print(t)

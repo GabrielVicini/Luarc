@@ -1,0 +1,12 @@
+dup	false	live
+seal gone	0	consumed
+partial	false	live
+with	false	live
+same	false	live
+sealed	3	consumed	consumed
+retire shared	false	7	1
+retire_with shared	false	1	live
+retire	1
+after	false	ownership.luarc:47: Beacon object was consumed by 'retire' and can no longer be used
+retire_all shared	false	1	1
+retire_all	2

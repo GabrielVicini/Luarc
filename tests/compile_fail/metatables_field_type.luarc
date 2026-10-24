@@ -1,0 +1,8 @@
+local C = {}
+C.__index = C
+C.x = "parent"
+local child = {x = 1}
+child.x = nil
+setmetatable(child, C)
+print(child.x)
+-- expect-error: 7:13: type mismatch: expected string, found number

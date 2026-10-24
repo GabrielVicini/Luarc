@@ -1,0 +1,23 @@
+-- table operations: array fill/sum, map counting with string keys, records
+local arr = {}
+for i = 1, 2000000 do
+    table.insert(arr, i * 0.5)
+end
+local sum = 0
+for _, v in ipairs(arr) do
+    sum += v
+end
+local counts: {[string]: number} = {}
+for i = 1, 200000 do
+    local key = "k" .. (i % 1000)
+    counts[key] = (counts[key] or 0) + 1
+end
+local points = {}
+for i = 1, 300000 do
+    table.insert(points, {x = i, y = i * 2})
+end
+local total = 0
+for _, p in ipairs(points) do
+    total += p.x + p.y
+end
+print(sum, counts["k7"], total)

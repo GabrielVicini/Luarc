@@ -1,0 +1,7 @@
+local C = {}
+C.__index = C
+local child = setmetatable({}, C)
+local Alias = C
+Alias.__call = function() end
+local ok = pcall(function() child() end)
+print(ok)

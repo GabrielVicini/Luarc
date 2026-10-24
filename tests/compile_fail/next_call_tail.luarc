@@ -1,0 +1,3 @@
+local function pair() return {1}, 1 end
+next(pair())
+-- expect-error: 2:1: next requires explicit single-value arguments (parenthesize calls to select one value)

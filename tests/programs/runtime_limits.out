@@ -1,0 +1,5 @@
+false	runtime_limits.luarc:3: bad argument to 'rep' (resulting string too large)
+false	runtime_limits.luarc:4: invalid argument #1 to 'create' (size out of range)
+6	0	3
+false	runtime_limits.luarc:7: task.wait_idle cannot be called inside a task (the task would wait for itself)
+done

@@ -1,0 +1,24 @@
+local function f(...: number): number
+  return ...
+end
+local function g(...: number): number
+  return math.max(...)
+end
+local function h(...: number): number
+  return select(1, 2, 3)
+end
+local function pass(...: number) return ... end
+local function k(): number
+  return math.min(1, pass(2, 3))
+end
+local function m(...: number): (...number)
+  return ...
+end
+local fixed: (...number) -> number = m
+print(f(1), g(1), h(1), k(), fixed())
+print(math.max(table.unpack({1, 2})))
+-- expect-error: 2:3: this returns a variable number of values (`...`), but the function's result type has a fixed number
+-- expect-error: 5:19: '...' cannot be used here: its number of values is only known at run time
+-- expect-error: 12:22: this call returns a variable number of values
+-- expect-error: 19:22: this call returns a variable number of values
+-- expect-error: 17:7: function type mismatch: one returns a variable number of values

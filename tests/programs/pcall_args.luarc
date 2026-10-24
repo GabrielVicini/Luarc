@@ -1,0 +1,25 @@
+local function divmod(a: number, b: number): (number, number)
+    if b == 0 then error("division by zero") end
+    return a // b, a % b
+end
+local ok, q, r = pcall(divmod, 17, 5)
+print(ok, q, r)
+local ok2, e2, r2 = pcall(divmod, 1, 0)
+print(ok2, e2, r2)
+print(pcall(print, "forwarded", 2))
+print(pcall(error, "raised"))
+local function add(a: number, b: number): number return a + b end
+local okA, s = pcall(add, 1, 2)
+if okA then print("sum", s + 1) end
+local okB, qq, rr = pcall(divmod, 9, 4)
+if okB then print("narrowed", qq + rr) end
+-- arguments are evaluated before the protected call: their errors are not caught
+local function bad(): number
+    error("arg error")
+    return 0
+end
+local okC, eC = pcall(function()
+    local inner_ok = pcall(divmod, bad(), 1)
+    return inner_ok
+end)
+print(okC, eC)

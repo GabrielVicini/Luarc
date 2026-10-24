@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+C.__index += 1
+-- expect-error: 3:3: type mismatch: expected {__index: {__index: {__index: {__index: {__index: ...}}}}}, found number

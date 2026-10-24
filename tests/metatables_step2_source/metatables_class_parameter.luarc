@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+local function f(P) return setmetatable({}, P) end
+f(C)

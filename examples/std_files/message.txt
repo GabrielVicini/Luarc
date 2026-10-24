@@ -1,0 +1,1 @@
+Hello from a luarc program reading a file.

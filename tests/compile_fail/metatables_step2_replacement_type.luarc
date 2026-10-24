@@ -1,0 +1,5 @@
+local mt = {__index = {x = 1}}
+local alias = mt
+local child = setmetatable({}, mt)
+alias.__index = {x = false}
+-- expect-error: 4:7: type mismatch: expected number, found boolean

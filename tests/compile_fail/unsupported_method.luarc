@@ -1,0 +1,3 @@
+local s = "%d"
+print(s:format(1))
+-- expect-error: 2:9: string method 'format' is not supported

@@ -1,0 +1,23 @@
+local s = "Hello, World"
+print(#s, s:len(), string.len(s))
+print(s:upper(), s:lower(), string.upper("ünï"))
+print(s:sub(1, 5), s:sub(-5), s:sub(8), s:sub(0), s:sub(5, 2), s:sub(-100, 3))
+print(string.sub(s, 2, -2))
+print(("ab"):rep(3), s:byte(1), string.char(72, 105))
+-- bytes, including NUL and invalid UTF-8
+local bin = "a\0b\xff"
+print(#bin, bin:byte(2), bin:byte(4))
+print("tab\tnew\\line",'single "q"', [[long
+string]])
+print(`interp {1 + 2} {s:sub(1, 1)} {true} {nil}`)
+local name = "x"
+print(`name={name}`)
+print(string.format("%d items at %.2f each = %s (%f) 100%%", 3, 1.5, "ok", 0.25))
+print(tostring(12), tostring(1.5), tostring(nil), tostring(true))
+print(tonumber("42"), tonumber("  0x1F "), tonumber("3.5e2"), tonumber("abc"), tonumber(""))
+print(type(1), type("s"), type(true), type(nil), type({}), type(1 == 2), type(function() end))
+print(1 .. "", 1.5 .. "|" .. -0.0)
+print("abc" == "abc", "a" .. "b" == "ab")
+local parts = {}
+for i = 1, 3 do parts[i] = tostring(i * i) end
+print(table.concat(parts, "-"), table.concat({1, 2, 3}))

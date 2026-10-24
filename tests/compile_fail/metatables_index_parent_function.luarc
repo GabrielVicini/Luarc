@@ -1,0 +1,2 @@
+local C = {__index = function() return 1 end}
+-- expect-error: 1:11: setmetatable __index must have a statically known record type

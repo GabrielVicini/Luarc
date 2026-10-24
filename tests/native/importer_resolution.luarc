@@ -1,0 +1,10 @@
+-- Importer resolution: a struct holding a native object by
+-- value is a handle (its `&self` methods never move the object out of a field);
+-- field views of shared (Arc) owners; specialized inherent impls; a trait method
+-- from one of several impls of a generic trait.
+local fx = require("rust:fixture")
+local h = fx.Hub.new("hub")
+print(h:ping(), h.name, h.notes:len(), h:ping())
+local k: number = 3
+print(fx.Wrapper.of_int(k):describe(), fx.Wrapper.of_text("x"):describe())
+print(fx.Meters.from(2.5):value())

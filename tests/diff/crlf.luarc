@@ -1,0 +1,19 @@
+-- CRLF line endings and CR bytes inside long strings. Kept byte-exact
+-- by .gitattributes (-text).
+local s = [[a
+bc
+d]]
+print(#s, s:byte(1), s:byte(2), s:byte(3), s:byte(4), s:byte(5), s:byte(6), s:byte(7))
+local t = [[
+x]]
+print(#t)
+local a = [[x]]
+print(#a, a:byte(1))
+local v = [==[
+x]==]
+print(#v)
+--[[ comment
+]] print("after")
+local w = "a\z
+   b"
+print(w)

@@ -1,0 +1,8 @@
+-- A Rust panic is not a language error: pcall does not catch it and the
+-- program aborts with the panic message (exit status 101).
+local fx = require("rust:fixture")
+print("before")
+local ok, err = pcall(function() return fx.always_panics(1) end)
+print("not reached", ok, err)
+-- expect-exit: 101
+-- expect-stderr: native invariant violated (1)

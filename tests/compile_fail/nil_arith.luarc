@@ -1,0 +1,5 @@
+local function double(x)
+    return x * 2
+end
+print(double(nil))
+-- expect-error: 2:14: attempt to perform arithmetic on a nil value (value may be nil

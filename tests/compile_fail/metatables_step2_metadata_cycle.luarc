@@ -1,0 +1,4 @@
+local a, b = {}, {}
+setmetatable(a, b)
+setmetatable(b, a)
+-- expect-error: 3:1: cyclic static metatable type expansion is not supported

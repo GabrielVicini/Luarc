@@ -1,0 +1,6 @@
+local C = {}
+C.__index = C
+local child = {}
+setmetatable(child, C)
+table.insert(child, 1)
+-- expect-error: 5:14: table is used as an array here but as a record elsewhere (mixed tables are unsupported)

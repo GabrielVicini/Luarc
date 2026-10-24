@@ -1,0 +1,76 @@
+-- Native traits implemented by ordinary tables, and retained callbacks.
+local fx = require("rust:fixture")
+
+-- a value-returning trait method
+local g = { name = "table" }
+function g:hello(): string
+    return "hello from " .. self.name
+end
+print(fx.greet_with(g))
+
+-- `&mut self` methods with lent arguments, a provided method kept as default,
+-- a Result method returning an error directly
+local root = fx.Tree.new("root")
+root:add("a")
+root:add("skip")
+root:add("b")
+local seen = {}
+local v = { depth_sum = 0 }
+function v:enter(node, depth)
+    table.insert(seen, node:label() .. "@" .. depth)
+    self.depth_sum += depth
+end
+function v:accept(label: string): boolean
+    return label ~= "skip"
+end
+print(fx.walk(root, v), table.concat(seen, " "), v.depth_sum)
+
+-- the lent node is only valid during the callback
+local kept = nil
+local k = {}
+function k:enter(node, depth)
+    if kept == nil then kept = node end
+end
+fx.walk(root, k)
+print(pcall(function() local kk = kept; if kk then return kk:label() end return "none" end))
+
+-- a source error in a Result method is returned to the native caller
+local bad = {}
+function bad:enter(node, depth) end
+function bad:accept(label: string): boolean
+    if label == "b" then error("refusing " .. label) end
+    return true
+end
+print(pcall(function() return fx.walk(root, bad) end))
+
+-- a source error in a ()-method: stored, later calls suppressed, reported
+local count = 0
+local failing = {}
+function failing:enter(node, depth)
+    count += 1
+    if depth == 1 then error("failed at depth 1") end
+end
+local okf, ef = pcall(function() return fx.walk(root, failing) end)
+print(okf, ef, count)
+
+-- retained callbacks: the registration owns the closure until unsubscribed
+local bus = fx.Bus.new()
+local total = 0
+local id = bus:subscribe(function(x) total += x end)
+local id2 = bus:subscribe(function(x) total += 10 * x end)
+print(bus:emit(1), total)
+print(bus:unsubscribe(id), bus:emit(2), total)
+print(bus:unsubscribe(id), bus:count())
+
+-- a registration keeps its captures alive; unsubscribing releases them
+local before = fx.live_tracked()
+local id3 = 0
+do
+    local t = fx.Tracked.new("captured")
+    id3 = bus:subscribe(function(x) local _ = t:name() end)
+end
+collectgarbage("collect")
+print("while registered", fx.live_tracked() - before)
+bus:unsubscribe(id3)
+collectgarbage("collect")
+print("after unsubscribe", fx.live_tracked() - before)

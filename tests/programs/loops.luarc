@@ -1,0 +1,70 @@
+local total = 0
+for i = 1, 10 do
+    if i % 2 == 0 then
+        continue
+    end
+    total += i
+end
+print("odd sum", total)
+
+local seen = {}
+for i = 10, 1, -3 do
+    table.insert(seen, i)
+end
+print(table.concat(seen, " "))
+
+for i = 1, 0 do
+    print("never")
+end
+for x = 0, 1, 0.25 do
+    print(x)
+end
+
+-- bounds/step evaluated once
+local calls = 0
+local function limit()
+    calls += 1
+    return 3
+end
+for i = 1, limit() do
+end
+print("limit calls", calls)
+
+local n = 0
+while true do
+    n += 1
+    if n == 3 then continue end
+    if n > 5 then break end
+end
+print("while", n)
+
+local k = 0
+repeat
+    local doubled = k * 2
+    k += 1
+until doubled >= 6
+print("repeat", k)
+
+-- nested loops with break/continue targeting the right loop
+local out = {}
+for i = 1, 3 do
+    for j = 1, 3 do
+        if j == 2 then continue end
+        if i == 3 then break end
+        table.insert(out, i * 10 + j)
+    end
+end
+print(table.concat(out, ","))
+
+-- closures capture a fresh loop variable per iteration
+local fns = {}
+for i = 1, 3 do
+    table.insert(fns, function() return i end)
+end
+print(fns[1](), fns[2](), fns[3]())
+
+local ok, err = pcall(function()
+    local step = 0
+    for i = 1, 2, step do end -- zero iterations, like Luau 0.743
+end)
+print(ok, err)

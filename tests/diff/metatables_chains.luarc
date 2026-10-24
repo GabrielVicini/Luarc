@@ -1,0 +1,42 @@
+local root = {x = 10}
+function root:read() return self.x end
+local middle = setmetatable({y = 20}, {__index = root})
+local leaf = setmetatable({}, {__index = middle})
+print("chain", leaf.x, leaf.y, leaf.absent)
+print("methods", leaf:read(), leaf.read(leaf))
+middle.x = 30
+print("shadow", leaf.x, root.x)
+middle.x = nil
+print("unshadow", leaf.x)
+local rawroot = {x = 60}
+local mt = setmetatable({}, {__index = {__index = rawroot}})
+local other = setmetatable({}, mt)
+print("raw-metamethod", mt.__index == rawroot, other.x)
+mt["__index"] = rawroot
+print("raw-own", other.x)
+mt.__index = nil
+print("raw-cleared", other.x, mt.__index == rawroot)
+local empty = setmetatable({}, {})
+local nilindex = setmetatable({}, {__index = nil})
+print("empty", empty.x, nilindex.x)
+local C = {}
+C.__index = C
+C.label = 40
+local P = {}
+P.__index = P
+P.z = 50
+setmetatable(C, P)
+function C:total() return self.label + self.z end
+local object = setmetatable({}, C)
+print("class-chain", object.label, object.z, object:total(), object.total(object))
+local cloned_class = table.clone(C)
+cloned_class.label = 99
+local instance = setmetatable({}, cloned_class)
+print("cloned-class-index", instance.label, instance.z)
+local Parent = {}
+function Parent.new(x) return setmetatable({x = x}, {__index = Parent}) end
+function Parent:pair(...: number) return self.x, ... end
+local child = Parent.new(7)
+print("colon-tail", child:pair(1, 2))
+print("dot-tail", child.pair(child, 3, 4))
+print("empty-tail", child:pair())

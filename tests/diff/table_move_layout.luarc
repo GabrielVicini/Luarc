@@ -1,0 +1,15 @@
+local source={nil,nil,33}
+local target={}
+table.move(source,1,3,1,target)
+print(#target,target[1],target[2],target[3])
+local key,value=next(target,2)
+print(key,value)
+local empty={}
+table.move(source,1,2,1,empty)
+local key=next(empty,1)
+print(#empty,key)
+local created=table.create(3)
+created[3]=44
+local destination={}
+table.move(created,1,3,1,destination)
+print(#destination,destination[1],destination[2],destination[3])

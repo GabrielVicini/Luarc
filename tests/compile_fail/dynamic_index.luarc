@@ -1,0 +1,3 @@
+local a: any = {}
+print(a.x)
+-- expect-error: 2:9: cannot access field 'x' of an 'any' value

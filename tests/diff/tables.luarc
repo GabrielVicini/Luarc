@@ -1,0 +1,33 @@
+-- table.insert/remove/concat/sort/clone, length, identity.
+local t = {}
+table.insert(t, "a")
+table.insert(t, "c")
+table.insert(t, 2, "b")
+table.insert(t, 1, "z")
+print(#t, table.concat(t, ","))
+print(table.remove(t), #t, table.concat(t, ","))
+print(table.remove(t, 1), #t, table.concat(t, ","))
+print(table.concat(t, "-", 2), table.concat(t, "", 1, 1))
+local nums = {5, 2, 8, 1, 9, 3}
+table.sort(nums)
+print(table.concat(nums, " "))
+table.sort(nums, function(a, b) return a > b end)
+print(table.concat(nums, " "))
+local words = {"pear", "Apple", "fig", "apple"}
+table.sort(words)
+print(table.concat(words, " "))
+local c = table.clone(nums)
+c[1] = 100
+print(nums[1], c[1], #c)
+local alias = nums
+alias[2] = -1
+print(nums[2])
+local m = {}
+m["x"] = 1
+m["y"] = 2
+m["x"] = nil
+local keys = 0
+for k, v in pairs(m) do keys += 1 end
+print(keys, m["y"], m["x"])
+local e: {number} = {}
+print(table.remove(e), #e)

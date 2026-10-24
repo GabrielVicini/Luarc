@@ -1,0 +1,14 @@
+# Rust build output, including standalone examples and benchmarks.
+target/
+# Generated luarc packages, dependency probes, and build/API caches.
+.luarc/
+*.exe
+*.pdb
+bench/out/
+fixtures/fixture_crate/Cargo.lock
+
+# Local agent checkouts (may contain uncommitted work; inspect before deleting).
+/.claude/worktrees/
+
+# Generated code graph and analysis cache.
+/graphify-out/

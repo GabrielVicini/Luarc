@@ -1,0 +1,68 @@
+-- error(msg, level): 0 no position, 1 (default) the error call, 2 the line of the call
+-- that made the function run. A call spread over several lines reports the line
+-- where the call starts.
+
+local function fail(label)
+    error(label, 2)
+end
+
+local function check(condition, label)
+    if not condition then
+        error(label or "check failed", 2)
+    end
+end
+
+local function levels(n)
+    if n == 0 then
+        error("level zero", 0)
+    elseif n == 1 then
+        error("level one", 1)
+    end
+    error("default level")
+end
+
+print(pcall(function() fail("a") end))
+print(pcall(function()
+    fail("b")
+end))
+print(pcall(function()
+    fail(
+        "c"
+    )
+end))
+print(pcall(function()
+    check(
+        false,
+        "d"
+    )
+end))
+print(pcall(function()
+    check(false, tostring(
+        1
+    ))
+end))
+print(pcall(function()
+    check(false,
+          "e")
+end))
+print(pcall(function() check(1 == 2) end))
+print(pcall(function() return check(nil, "tail call") end))
+print(pcall(levels, 0))
+print(pcall(levels, 1))
+print(pcall(levels, 2))
+
+-- the position is that of the call, also inside loops and nested functions
+for i = 1, 2 do
+    print(pcall(function() check(i == 5, "loop " .. i) end))
+end
+local function outer(flag)
+    local function inner(f)
+        check(f, "inner")
+    end
+    inner(flag)
+end
+print(pcall(outer, false))
+print(pcall(outer, true) == true)
+
+-- a number message gets a position too (it is converted to a string)
+print(pcall(function() check(false, 42) end))

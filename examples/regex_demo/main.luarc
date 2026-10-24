@@ -1,0 +1,35 @@
+-- regex: a regular crate imported with `luarc add regex`; no Rust glue.
+local regex = require("rust:regex")
+
+local pattern = regex.Regex.new("^[A-Z]+$")
+print(pattern:is_match("HELLO"))
+print(pattern:is_match("Hello"))
+
+-- invalid patterns raise catchable errors (Result -> error)
+local ok, err = pcall(function() return regex.Regex.new("(unclosed") end)
+print("invalid pattern caught:", not ok)
+
+-- methods with borrowed string results and Cow<str> results
+local date = regex.Regex.new([[(\d{4})-(\d{2})-(\d{2})]])
+print(date:as_str())
+print(date:replace_all("from 2024-01-15 to 2025-06-30", "<date>"))
+print(date:captures_len(), date:shortest_match("on 1999-12-31!"))
+
+-- builder pattern: methods returning &mut Self chain on the same handle
+local builder = regex.RegexBuilder.new("hello")
+builder:case_insensitive(true)
+local ci = builder:build()
+print(ci:is_match("HeLLo world"))
+
+-- free function
+print(regex.escape("a.b*c"))
+
+-- a table of words filtered with a native predicate
+local words = {"ALPHA", "beta", "GAMMA", "delta"}
+local upper = {}
+for _, w in ipairs(words) do
+    if pattern:is_match(w) then
+        table.insert(upper, w)
+    end
+end
+print(table.concat(upper, ","))

@@ -1,0 +1,3 @@
+local attach = setmetatable
+attach = print
+-- expect-error: 1:16: 'setmetatable' cannot be used as a function value (call it directly)

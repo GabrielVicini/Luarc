@@ -1,0 +1,29 @@
+--!optimize 2
+local computed = {[0+1]="a", [1+1]="b", [2+1]="c"}
+print("computed", pcall(function() next(computed, 4) end))
+local literal = {[1]="a", [2]="b", [3]="c"}
+print("literal", pcall(function() next(literal, 4) end))
+local a, b, c = 1, 2, 3
+local constants = {[a]="a", [b]="b", [c]="c"}
+print("constants", pcall(function() next(constants, 4) end))
+local direct = {}
+direct[1]="a"; direct[2]="b"; direct[3]="c"
+print("direct", pcall(function() next(direct, 4) end))
+local loop = {}
+for i=1,3 do loop[i]="x" end
+print("loop", pcall(function() next(loop, 4) end))
+local list = {"a", "b", "c"}
+print("list", pcall(function() next(list, 4) end))
+local function runtime_record_cases()
+local runtime = setmetatable({[0+1]="a", [1+1]="b", [2+1]="c"}, {__tostring=function(): string return "runtime" end})
+print("runtime", pcall(function() next(runtime, 4) end))
+local record = setmetatable({a=nil, b=2, c=3}, {__tostring=function(): string return "record" end})
+print("record", pcall(function() next(record, "a") end))
+end
+runtime_record_cases()
+local values: {any} = {}
+values[1]=1; values[2]=2; values[3]=3; values[4]=4; values[5]=5; values[6]=6
+values[5]=nil
+local any_count = 0
+for _ in values do any_count += 1 end
+print("any", #values, any_count)

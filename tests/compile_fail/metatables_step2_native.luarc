@@ -1,0 +1,4 @@
+local fx = require("rust:fixture")
+local child = fx.midpoint({x = 1, y = 2}, {x = 3, y = 4})
+setmetatable(child, {})
+-- expect-error: 3:1: metatables on native-converted records are not supported in this step

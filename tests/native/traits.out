@@ -1,0 +1,10 @@
+[hello from table]
+3	root@0 a@1 b@1	2
+false	traits.luarc:35: Tree was lent to a callback and is only valid while that callback runs
+false	traits.luarc:44: walk: traits.luarc:41: refusing b
+false	traits.luarc:51: failed at depth 1	2
+2	11
+true	1	31
+false	1
+while registered	1
+after unsubscribe	0

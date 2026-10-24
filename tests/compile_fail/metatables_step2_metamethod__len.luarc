@@ -1,0 +1,2 @@
+local child = setmetatable({}, {__index = {}, __len = 1})
+-- expect-error: 1:28: metamethod '__len' is not supported in this step

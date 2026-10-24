@@ -1,0 +1,3 @@
+local attach = setmetatable
+local t = {f = attach}
+-- expect-error: 2:16: 'setmetatable' cannot be used as a function value (call it directly)

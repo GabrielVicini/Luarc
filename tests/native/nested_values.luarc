@@ -1,0 +1,13 @@
+-- Nested Option and tuple results have stable source representations:
+-- Option<Option<T>> is an optional `{value = T?}` box (None and Some(None) stay
+-- distinct); a nested tuple is a record `{_1, _2, ...}`. Top-level tuples are
+-- still multiple results.
+local fx = require("rust:fixture")
+
+local some_some = fx.nested_option(5)
+local some_none = fx.nested_option(-1)
+if some_some then print("Some(Some):", some_some.value) end
+if some_none then print("Some(None):", some_none.value == nil) end
+
+local pair, third = fx.nested_tuple()
+print(pair._1, pair._2, third)

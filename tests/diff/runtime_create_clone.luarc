@@ -1,0 +1,7 @@
+local t = table.create(3, 2)
+local copy = table.clone(t)
+local marker = setmetatable({}, { __len = function() return 0 end })
+local k,v=next(copy)
+print(k,v,copy~=t,#marker)
+copy[1]=9
+print(t[1],copy[1])

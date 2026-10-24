@@ -1,0 +1,23 @@
+# Protocol facts for winit's application handler and event loop proxy.
+#
+# * `ApplicationHandler` methods return `()`: a source error raised in one of them
+#   cannot be returned to winit. luarc stores it, suppresses later callbacks, and
+#   asks the loop to return with `event_loop.exit()`; `run_app` then reports the
+#   error at its call site. (winit invokes handlers from the platform's window
+#   procedure on Windows — a non-unwinding boundary — so no unwinding is used.)
+# * `EventLoopProxy::send_event(())` wakes the loop from any thread: luarc tasks
+#   use it as their wake hook (`task.wake_through(proxy)`); the program then
+#   polls ready tasks in its `user_event` handler.
+adapter = "winit-app"
+adapter_version = 1
+crate = "winit"
+
+[[trait_error]]
+trait = "application.ApplicationHandler"
+arg = "event_loop"
+method = "exit"
+
+[[task_waker]]
+type = "event_loop.EventLoopProxy"
+method = "send_event"
+arg = "()"

@@ -1,0 +1,7 @@
+1.4.2-beta.1	1	4	2
+2.3.0
+negative major rejected:	true
+true
+>=1.2.0, <2.0.0	1.2.0 1.9.9
+error:	main.luarc:30: Version.parse: unexpected character 'n' while parsing major version number
+true	1	2	nil

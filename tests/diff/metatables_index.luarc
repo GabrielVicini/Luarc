@@ -1,0 +1,98 @@
+-- Luau 0.743: only nil falls back; attachment belongs to each table identity.
+do
+local Class = {}
+Class.__index = Class
+Class.x, Class.flag, Class.zero = 7, true, 5
+Class.negative, Class.empty = -9, "parent"
+Class.nan, Class.inf = 0/0, math.huge
+local child = {x = 1, flag = false, zero = 0, empty = ""}
+local alias = child
+print("before", child.negative)
+print("identity", setmetatable(child, Class) == child, alias == child)
+print("own", child.x, child.flag, child.zero, child.empty == "")
+print("fallback", child.negative, child["negative"], alias.negative)
+child.x = nil
+print("nil", child.x)
+child.x = 3
+print("write", child.x, Class.x)
+child.x = nil
+Class.x = 8
+print("live", child.x, alias.x)
+print("missing", child.absent)
+print("numbers", child.nan ~= child.nan, child.inf == math.huge)
+local function receiver() print("receiver") return child end
+local function rhs() print("rhs") Class.x = 20 return 2 end
+receiver().x += rhs()
+print("compound", child.x, Class.x)
+child.x = nil
+child.x, Class.x = 3, 4
+print("parallel", child.x, Class.x)
+end
+do
+local A = {}
+A.__index = A
+A.x = 7
+function A:get() return self.x end
+local B = {}
+B.__index = B
+B.x = 8
+function B:get() return self.x end
+local child = {}
+local alias = child
+local plain = {}
+local function read(t): number? return t.x end
+print("unattached", read(child), read(plain))
+local function first() print("first", child.x) return child end
+local function extra() print("extra", child.x) A.x = 9 return 1, 2 end
+print("attach", setmetatable(first(), A, extra()) == child)
+print("attached", alias:get(), plain.x)
+print("reattach", setmetatable(child, B) == alias, alias:get())
+local function keep(t) return function() return read(t) end end
+local saved = keep(alias)
+B.x = -3
+print("closure", saved())
+local holder = {child}
+local map = {["child"] = child}
+print("containers", holder[1]:get(), map["child"]:get())
+end
+do
+local Class = {}
+Class.__index = Class
+function Class.new() return setmetatable({}, Class) end
+function Class.fail() error("inherited failure") end
+local obj = Class.new()
+local function arg() print("argument") return 3 end
+local ok, err = pcall(function() local x = obj:missing(arg()) return x end)
+print("missing", ok, err)
+local ok2, err2 = pcall(function() return obj:fail() end)
+print("failure", ok2, err2)
+local ok3, err3 = pcall(function() local x = obj.missing(obj, arg()) return x end)
+print("dot-missing", ok3, err3)
+Class.other = {f = function(self, value) return value end}
+Class.other = nil
+local ok4, err4 = pcall(function() return obj.other:f(arg()) end)
+print("nil-receiver", ok4, err4)
+end
+do
+local attach = setmetatable
+local C = {}
+C.__index = C
+C.x = 6
+local obj = attach({}, C)
+print("builtin-alias", obj.x)
+end
+do
+local C = {}
+C.__index = C
+C.x = 5
+local child: {own: number} = {own = 2}
+local obj = setmetatable(child, C)
+print("closed", obj.own, obj.x)
+local optional: {own: number, x: number?} = {own = 3}
+setmetatable(optional, C)
+print("optional", optional.x)
+optional.x = 0
+print("optional-own", optional.x)
+optional.x = nil
+print("optional-nil", optional.x)
+end

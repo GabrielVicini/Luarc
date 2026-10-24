@@ -1,0 +1,6 @@
+-- `luarc run` preserves the program's exit status. Windows supports statuses
+-- above 255; Unix truncates exit(256) to zero.
+local fx = require("rust:fixture")
+print("exiting")
+fx.exit_with(256)
+-- expect-exit: 256

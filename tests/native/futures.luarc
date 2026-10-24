@@ -1,0 +1,45 @@
+-- Native futures awaited from tasks; the executor sleeps until a real wakeup
+-- (timer threads in the fixture), never spins.
+local fx = require("rust:fixture")
+
+local log = {}
+local t1 = task.spawn(function()
+    local ms = await(fx.delay_ms(30))
+    table.insert(log, "delay " .. ms)
+    local port = await(fx.parse_later(5, "8080"))
+    table.insert(log, "port " .. port)
+end)
+local t2 = task.spawn(function()
+    local delay = fx.Delay.new(10)          -- a concrete type implementing Future
+    table.insert(log, "concrete " .. await(delay))
+end)
+print("pending after spawn", task.pending())
+local polls_before = task.polls()
+task.wait_idle()
+print(table.concat(log, ", "))
+print(task.is_pending(t1), task.is_pending(t2))
+-- three suspensions plus first polls: a handful of polls, not a spin loop
+print("polls bounded", task.polls() - polls_before <= 12)
+
+-- an error inside a task is reported by the call that drives the tasks
+task.spawn(function()
+    await(fx.parse_later(1, "not a number"))
+end)
+print(pcall(function() task.wait_idle() end))
+
+-- a future can be awaited once
+local f = fx.delay_ms(1)
+task.spawn(function() await(f) end)
+task.spawn(function() await(f) end)
+print(pcall(function() task.wait_idle() end))
+task.wait_idle()
+
+-- cancellation releases what the task (and its future) retained
+local before = fx.live_tracked()
+local t3 = task.spawn(function()
+    await(fx.hold_forever(fx.Tracked.new("held")))
+end)
+task.run_ready()
+print("held", fx.live_tracked() - before, task.is_pending(t3))
+print("cancelled", task.cancel(t3), fx.live_tracked() - before, task.is_pending(t3))
+print("cancel again", task.cancel(t3))

@@ -1,0 +1,67 @@
+local function check(label: string, expected: string, callback: () -> ())
+    local ok, err = pcall(callback)
+    assert(not ok, label)
+    local text = tostring(err)
+    local first = string.find(text, "attempt", 1, true)
+    if first ~= nil then
+        local core = string.sub(text, first)
+        assert(core == expected, core)
+        print(label, core)
+    else
+        error(text)
+    end
+end
+local nilKey: any = nil
+local nanKey: any = 0/0
+local numbers: {[any]: number} = {[false] = 0, ["present"] = 8}
+check("add-left", "attempt to perform arithmetic (add) on nil and number", function() numbers[nilKey] += 2 end)
+check("add-right", "attempt to perform arithmetic (add) on number and nil", function() numbers["present"] += numbers["absent"] end)
+check("add-both", "attempt to perform arithmetic (add) on nil", function() numbers[nilKey] += numbers["absent"] end)
+check("sub-left", "attempt to perform arithmetic (sub) on nil and number", function() numbers[nilKey] -= 2 end)
+check("sub-right", "attempt to perform arithmetic (sub) on number and nil", function() numbers["present"] -= numbers["absent"] end)
+check("sub-both", "attempt to perform arithmetic (sub) on nil", function() numbers[nilKey] -= numbers["absent"] end)
+check("mul-left", "attempt to perform arithmetic (mul) on nil and number", function() numbers[nilKey] *= 2 end)
+check("mul-right", "attempt to perform arithmetic (mul) on number and nil", function() numbers["present"] *= numbers["absent"] end)
+check("mul-both", "attempt to perform arithmetic (mul) on nil", function() numbers[nilKey] *= numbers["absent"] end)
+check("div-left", "attempt to perform arithmetic (div) on nil and number", function() numbers[nilKey] /= 2 end)
+check("div-right", "attempt to perform arithmetic (div) on number and nil", function() numbers["present"] /= numbers["absent"] end)
+check("div-both", "attempt to perform arithmetic (div) on nil", function() numbers[nilKey] /= numbers["absent"] end)
+check("idiv-left", "attempt to perform arithmetic (idiv) on nil and number", function() numbers[nilKey] //= 2 end)
+check("idiv-right", "attempt to perform arithmetic (idiv) on number and nil", function() numbers["present"] //= numbers["absent"] end)
+check("idiv-both", "attempt to perform arithmetic (idiv) on nil", function() numbers[nilKey] //= numbers["absent"] end)
+check("mod-left", "attempt to perform arithmetic (mod) on nil and number", function() numbers[nilKey] %= 2 end)
+check("mod-right", "attempt to perform arithmetic (mod) on number and nil", function() numbers["present"] %= numbers["absent"] end)
+check("mod-both", "attempt to perform arithmetic (mod) on nil", function() numbers[nilKey] %= numbers["absent"] end)
+check("pow-left", "attempt to perform arithmetic (pow) on nil and number", function() numbers[nilKey] ^= 2 end)
+check("pow-right", "attempt to perform arithmetic (pow) on number and nil", function() numbers["present"] ^= numbers["absent"] end)
+check("pow-both", "attempt to perform arithmetic (pow) on nil", function() numbers[nilKey] ^= numbers["absent"] end)
+check("nan-read", "attempt to perform arithmetic (add) on nil and number", function() numbers[nanKey] += 2 end)
+check("named-left", "attempt to perform arithmetic (add) on nil and number", function() numbers.missing += 2 end)
+check("named-right", "attempt to perform arithmetic (add) on number and nil", function() numbers.present += numbers.absent end)
+check("named-both", "attempt to perform arithmetic (add) on nil", function() numbers.missing += numbers.absent end)
+local strings: {[any]: string} = {[false] = "F", ["present"] = "A"}
+check("concat-string", "attempt to concatenate nil with string", function() strings[nilKey] ..= "B" end)
+check("concat-number", "attempt to concatenate nil with number", function() strings[nilKey] ..= 2 end)
+check("concat-right", "attempt to concatenate string with nil", function() strings["present"] ..= strings["absent"] end)
+check("concat-both", "attempt to concatenate nil with nil", function() strings[nilKey] ..= strings["absent"] end)
+check("concat-nan", "attempt to concatenate nil with string", function() strings[nanKey] ..= "B" end)
+check("concat-named-left", "attempt to concatenate nil with string", function() strings.missing ..= "B" end)
+check("concat-named-right", "attempt to concatenate string with nil", function() strings.present ..= strings.absent end)
+local calc: {[any]: number} = {[false] = 0, ["value"] = 32}
+calc["value"] += 2; assert(calc["value"] == 34)
+calc["value"] -= 2; assert(calc["value"] == 32)
+calc["value"] *= 2; assert(calc["value"] == 64)
+calc["value"] /= 2; assert(calc["value"] == 32)
+calc["value"] //= 3; assert(calc["value"] == 10)
+calc["value"] %= 3; assert(calc["value"] == 1)
+calc["value"] ^= 2; assert(calc["value"] == 1)
+strings["present"] ..= 3
+strings["present"] ..= "B"
+calc.value += 1
+strings.present ..= "C"
+print("valid", calc["value"], strings["present"])
+local integers: {[any]: integer} = {[false] = 0, ["present"] = 4}
+check("integer-left", "attempt to perform arithmetic (add) on nil and number", function() integers[nilKey] += 2 end)
+check("integer-both", "attempt to perform arithmetic (add) on nil", function() integers[nilKey] += integers["absent"] end)
+integers["present"] += 2
+print("integer-valid", integers["present"])

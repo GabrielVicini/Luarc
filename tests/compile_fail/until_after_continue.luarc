@@ -1,0 +1,10 @@
+-- A `continue` must not jump over a local read by the `until` condition.
+-- Luau 0.743 rejects this program with the same rule.
+local i = 0
+repeat
+  i += 1
+  if i == 1 then continue end
+  local j = i
+until j >= 3
+print(i)
+-- expect-error: 8:9: local 'j' used in the repeat..until condition is undefined because the continue statement on line 6 jumps over it

@@ -1,0 +1,32 @@
+-- Tuples passed into native code are records {_1, _2, ...}, the same shape they
+-- have when native code returns them.
+local fx = require("rust:fixture")
+
+-- a top-level tuple parameter
+print(fx.takes_tuple({ _1 = 2, _2 = 40 }))
+local pair, third = fx.nested_tuple()
+print(fx.takes_tuple(pair) + third)
+
+-- slices and vectors of tuples, with borrowed strings
+print(fx.weigh({ { _1 = "ab", _2 = 1.5 }, { _1 = "xyz", _2 = 2 } }))
+print(fx.weigh({}) == 0)
+print(fx.owned_pairs({ { _1 = "a", _2 = 1 }, { _1 = "b", _2 = -2 } }))
+
+-- optional tuple elements
+print(fx.optional_pair({ _1 = 7, _2 = true }), fx.optional_pair({ _1 = nil, _2 = true }), fx.optional_pair({ _2 = false }))
+
+-- the wgpu shape: a struct read from native code (Default, a native function),
+-- changed, and passed back inside a descriptor
+local opts = fx.CompileOptions.default()
+print(#opts.constants, opts.zero_init)
+print(fx.describe_stage({ entry = "vs", options = opts }))
+local sample = fx.sample_options()
+print(sample.constants[1]._1, sample.constants[2]._2)
+print(fx.describe_stage({ entry = "fs", options = sample }))
+sample.constants = { { _1 = "SAMPLES", _2 = 4 } }
+sample.zero_init = false
+print(fx.describe_stage({ entry = "fs", options = sample }))
+print(fx.describe_stage({ entry = "cs", options = { constants = { { _1 = "N", _2 = 1 } }, zero_init = true } }))
+
+-- a field type core defines in a private module is named by its public path
+print(fx.describe_limits({ max = fx.limit(5) }), fx.describe_limits({ max = fx.limit(0) }), fx.describe_limits({ max = nil }))

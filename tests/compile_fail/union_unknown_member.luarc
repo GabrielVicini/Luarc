@@ -1,0 +1,2 @@
+local x: number | Foo = 1
+-- expect-error: 1:19: unknown type 'Foo'

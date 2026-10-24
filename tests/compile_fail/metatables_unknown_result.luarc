@@ -1,0 +1,5 @@
+local C = {}
+C.__index = C
+local child = setmetatable({}, C)
+print(child:missing())
+-- expect-error: 3:28: cannot determine how many values this call returns here; annotate the function's return type

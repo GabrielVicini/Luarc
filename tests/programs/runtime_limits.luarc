@@ -1,0 +1,10 @@
+-- Oversized results are language errors, not Rust panics/aborts;
+-- task.wait_idle inside a task is an error, not a hang.
+print(pcall(function() return #string.rep("ab", 2^62) end))
+print(pcall(function() return #table.create(2^60, 0) end))
+print(#string.rep("ab", 3), #string.rep("", 2^62), #table.create(3, 1))
+task.spawn(function()
+    print(pcall(function() task.wait_idle() end))
+end)
+task.wait_idle()
+print("done")

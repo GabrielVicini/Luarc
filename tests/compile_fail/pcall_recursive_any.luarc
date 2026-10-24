@@ -1,0 +1,11 @@
+local function recur()
+    local _, value = pcall(recur)
+    return value
+end
+local function boxed()
+    local _, value = pcall(recur)
+    local result: any = value
+    return result
+end
+print("checked")
+-- expect-error: 7:11: a recursive result type cannot be converted to 'any'

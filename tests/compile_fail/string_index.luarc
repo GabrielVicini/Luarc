@@ -1,0 +1,3 @@
+local s = "abc"
+print(s[1])
+-- expect-error: 2:8: cannot index a string

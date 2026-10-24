@@ -1,0 +1,21 @@
+local function handler(err) return "handled:"..err end
+print(xpcall(function() end,handler))
+local function body(fail)
+ if fail then error("body",0) end
+ return 11,nil,33
+end
+print(xpcall(body,handler,true))
+print(xpcall(body,handler,false))
+local function forward(fail)
+ return xpcall(body,handler,fail)
+end
+print(forward(true))
+print(forward(false))
+local function empty() return xpcall(function()end,handler) end
+print(empty())
+local ok,first,second,third=forward(false)
+print(ok,first,second,third)
+local ok,message,extra=forward(true)
+print(ok,message,extra)
+local ok,value=empty()
+print(ok,value)

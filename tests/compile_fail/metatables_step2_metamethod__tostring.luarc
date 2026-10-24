@@ -1,0 +1,2 @@
+local child = setmetatable({}, {__index = {}, __tostring = 1})
+-- expect-error: 1:28: metamethod '__tostring' is not supported in this step

@@ -1,0 +1,17 @@
+-- native calls: scalar wrapper (f64 -> f64), string conversion, slice snapshot
+local fx = require("rust:fixture")
+local acc = 0
+for i = 1, 5000000 do
+    acc = fx.add(acc, 1)
+end
+local len = 0
+for i = 1, 200000 do
+    len += #fx.greet("x")
+end
+local data = {}
+for i = 1, 1000 do table.insert(data, i) end
+local best = 0
+for i = 1, 2000 do
+    best = fx.largest(data)
+end
+print(acc, len, best)

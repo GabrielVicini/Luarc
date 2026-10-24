@@ -1,0 +1,37 @@
+local ok,v=xpcall(function()error("bad-packet",0)end,function(err)return "handled:"..tostring(err)end)
+print(ok,v)
+print(string.find(v,"handled:",1,true))
+local a,b,c,d=xpcall(function(a,b)return a,b,false end,function(err)return err end,1,"two")
+print(a,b,c,d)
+local a,b=xpcall(function()error("body",0)end,function()return 42,43 end)
+print(a,b)
+local a,b=xpcall(function()error("body",0)end,function()error("handler",0)end)
+print(a,b)
+local a,b=xpcall(function()error("body",0)end,function()end)
+print(a,b)
+local trace=""
+local function mark(s)trace..=s return 7 end
+local a,b=xpcall(function(x)trace..="b" return x end,function(e)trace..="h"return e end,mark("a"))
+print(a,b,trace)
+local function one():number return 42 end
+local a,b=xpcall(function(x:any)return x end,function(e)return e end,one())
+print(a,b)
+local function three()return 7,nil,'tail'end
+local a,b,c,d=xpcall(function(x:any,y:any,z:any)return x,y,z end,function(e)return e end,three())
+print(a,b,c,d)
+local a,b=xpcall(function(...:any)local x,y,z=... return tostring(x)..':'..tostring(y)..':'..tostring(z)end,function(e)return e end,three())
+print(a,b)
+local a,b=xpcall(function(x:any)return type(x)end,function(e)return e end)
+print(a,b)
+local a,b=xpcall(function()error('body',0)end,function(e:any,missing:any)return tostring(e)..':'..tostring(missing)end)
+print(a,b)
+local a,b=xpcall(function()error('body',0)end,function(...:any)local e=... return tostring(e)end)
+print(a,b)
+local targets={function()return 1 end}
+local trace=''
+local function mark()trace..='a' return 7 end
+local a,b=xpcall(targets[2],function(e)return e end,mark())
+print(a,b,trace)
+local handlers={function(e)return e end}
+local a,b=pcall(function()xpcall(function()trace..='b'end,handlers[2],mark())end)
+print(a,b,trace)

@@ -1,0 +1,3 @@
+local a: any = nil
+a()
+-- expect-error: 2:1: attempt to call an 'any' value

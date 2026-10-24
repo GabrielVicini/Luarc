@@ -1,0 +1,4 @@
+-- expect-error: 4:7: table.move into a known table-element array requires a source with known runtime-table elements
+local source={1}
+local target={{2}}
+table.move(source,1,1,1,target)

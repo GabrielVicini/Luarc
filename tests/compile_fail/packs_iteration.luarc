@@ -1,0 +1,3 @@
+local t = table.pack(1, nil, 3)
+for k, v in pairs(t) do print(k, v) end
+-- expect-error: 2:19: iteration over a nil-preserving array is not supported

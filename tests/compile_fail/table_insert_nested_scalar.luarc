@@ -1,0 +1,4 @@
+-- expect-error: 4:20: table.insert into a known table-element array requires a runtime-table value
+local items={{1}}
+table.isfrozen(items)
+table.insert(items,2)

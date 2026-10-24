@@ -1,0 +1,2 @@
+local function f<T...>(x: T) return x end
+-- expect-error: 1:19: generic type packs (`T...`) are not supported

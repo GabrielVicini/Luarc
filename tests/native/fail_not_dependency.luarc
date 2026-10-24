@@ -1,0 +1,2 @@
+local re = require("rust:not_a_dep")
+-- expect-error: 1:12: crate 'not_a_dep' is not a dependency of this project

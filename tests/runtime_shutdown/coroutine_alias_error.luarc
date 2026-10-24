@@ -1,0 +1,4 @@
+local function cached() return "word" end
+local alias = cached
+coroutine.isyieldable()
+error("sentinel", 0)

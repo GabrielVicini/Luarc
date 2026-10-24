@@ -1,0 +1,7 @@
+local C = {}
+C.__index = C
+function C:get() return self.x + 1 end
+local child = setmetatable({x = 1}, C)
+print(child:get())
+print(child.get({x = "bad"}))
+-- expect-error: 6:17: type mismatch: expected number, found string

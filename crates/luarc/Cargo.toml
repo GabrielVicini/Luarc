@@ -1,0 +1,16 @@
+[package]
+name = "luarc"
+description = "Compiler for a statically checked Luau-style language that targets Rust and imports Rust crates"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "luarc"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1.1"
+rustdoc-types = "=0.61.0"

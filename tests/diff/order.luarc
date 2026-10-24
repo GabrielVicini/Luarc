@@ -1,0 +1,32 @@
+-- Evaluation order: arguments, extra arguments, assignments, constructors, receivers.
+local log = {}
+local function t(x: number): number table.insert(log, x) return x end
+local function flush() print(table.concat(log, ",")) log = {} end
+local function one(a: number) return a end
+local function two(a: number, b: number) return a + b end
+print(one(t(1), t(2), t(3))); flush()
+print(one(t(1) + 0, t(2) + 0)); flush()
+print(two(t(1), t(2))); flush()
+local obj = {n = 0}
+function obj:m(a: number) return a + self.n end
+print(obj:m(t(3) + 0, t(4) + 0)); flush()
+local calls = 0
+local function getobj() calls += 1 return obj end
+print(getobj():m(t(5)), calls); flush()
+local arr = {t(1), t(2), t(3)}
+flush()
+print(#arr)
+local a, b = 1, 2
+a, b = b, a
+print(a, b)
+local q = {1, 2, 3}
+local i = 1
+i, q[i] = i + 1, 20
+print(i, q[1], q[2])
+local cnt = 0
+local function idx() cnt += 1 return 1 end
+q[idx()] += 5
+print(q[1], cnt)
+print(t(1) + t(2) * t(3)); flush()
+print(t(2) ^ t(3) ^ t(1)); flush()
+print(t(1) < t(2), t(4) == t(5)); flush()

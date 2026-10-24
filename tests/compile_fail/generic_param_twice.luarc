@@ -1,0 +1,2 @@
+local function f<T, T>(x: T) return x end
+-- expect-error: 1:21: type parameter 'T' is declared twice

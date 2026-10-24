@@ -1,0 +1,3 @@
+local arr = {1, 2}
+print(arr.size)
+-- expect-error: 2:11: cannot access field 'size' of an array

@@ -1,0 +1,28 @@
+3.5	hello, luau!	ABC
+3	true	255
+1.5	h	nil
+42	hi there
+3	nil
+8080
+false	families.luarc:12: parse_port: invalid port number 'http'
+-1	7.5
+key	value
+4	1,4,9,16
+6	3
+a-b-c	42
+3	3	circle r=3
+3.1416
+3
+2	1
+12	2
+2
+11	5
+red	green	true	false
+6	Circle(1.0)
+9	<1.5>	<s>
+12.5
+ababab
+18
+THE QUICK FOX
+101,102
+calls	4

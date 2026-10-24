@@ -1,0 +1,3 @@
+local x: number = 1
+x = "a string"
+-- expect-error: 2:1: type mismatch: expected number, found string

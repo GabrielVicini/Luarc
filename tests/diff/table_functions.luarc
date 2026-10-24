@@ -1,0 +1,10 @@
+local values={}
+print(table.isfrozen(values))
+local f=nil
+if true then f=function() return 7 end end
+table.insert(values,f)
+print(type(values[1]))
+local missing=nil
+if false then missing=function() return 9 end end
+table.insert(values,missing)
+print(values[2])

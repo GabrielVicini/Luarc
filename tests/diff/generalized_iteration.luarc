@@ -1,0 +1,73 @@
+local function iter(_, key)
+    local n = (key or 0) + 1
+    if n <= 3 then return n, n * n end
+end
+for k,v in iter,nil,nil do print(k,v) end
+local index=0
+local function closure()
+  index+=1
+  if index<=2 then return false,index end
+end
+for k,v in closure do print(k,v) end
+local a={4,9}
+local k,v=next(a); print(k,v)
+local x,y=next(a,2); print(x,y)
+local ok,err=pcall(function() return next(a,1.5) end)
+if not ok then print(ok,string.find(err,"invalid key to 'next'",1,true) ~= nil) end
+local total, weighted = 0, 0
+for index, value in {3,5,8} do
+    if index == 2 then continue end
+    total += value
+    weighted += index * value
+end
+print(total, weighted)
+local m = {[false] = 4, [true] = 8}
+local sum = 0
+for k, v in m do sum += v end
+print(sum)
+local t = table.create(3, 7)
+local copy = table.clone(t)
+local alias = t
+table.clear(t)
+print(#alias, copy[2], next(t) == nil)
+local d = {["a"] = 1}
+local dk,dv = next(d)
+print(dk,dv)
+table.clear(d)
+print(next(d) == nil)
+local records = {{score=7,id="c"},{score=2,id="a"},{score=5,id="b"}}
+table.sort(records, function(a,b) return a.score < b.score end)
+print(records[1].id,records[2].id,records[3].id)
+print(string.find("a.b", ".", 1, true))
+local removed = {["a"]=1,["b"]=2}
+local rk = next(removed)
+if rk ~= nil then
+    removed[rk] = nil
+    local nk,nv = next(removed,rk)
+    print(nk ~= nil, nv ~= nil)
+end
+local tail = {1,2}
+tail[2] = nil
+local tk,tv = next(tail,2)
+print(tk,tv)
+local nm = {[2]=3}
+local nok,ne = pcall(function() return next(nm,0/0) end)
+if not nok then print(nok,string.find(ne,"invalid key to 'next'",1,true)~=nil) end
+local function first(t) return next(t) end
+local fk,fv = first({5,6})
+print(fk,fv)
+local count = 0
+local function dynamic_iterator(): any
+    count += 1
+    if count == 1 then return false end
+    return nil
+end
+for k in dynamic_iterator do print(k) end
+local square_index=0
+local function squares()
+    square_index+=1
+    if square_index<=4 then return square_index,square_index*square_index end
+end
+local square_total=0
+for index,square in squares do square_total+=square end
+print(square_total)

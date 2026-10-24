@@ -1,0 +1,35 @@
+-- Map iteration policy: keys are snapshotted when the loop starts; keys deleted
+-- during iteration are skipped; values are read when each key is reached; keys
+-- added during iteration are not visited. Order is unspecified (insertion order
+-- in this implementation; programs must not depend on it).
+local m = {a = 1, b = 2, c = 3}
+local inventory: {[string]: number} = {}
+inventory["apples"] = 3
+inventory["pears"] = 0
+inventory["plums"] = 7
+local visited = {}
+for k, v in pairs(inventory) do
+    if k == "apples" then
+        inventory["plums"] = 70   -- read when reached
+        inventory["pears"] = nil  -- deleted before reached: skipped
+        inventory["kiwis"] = 1    -- added during iteration: not visited
+    end
+    table.insert(visited, k .. "=" .. v)
+end
+print(table.concat(visited, " "))
+local total = 0
+for _, v in pairs(inventory) do total += v end
+print("total", total)
+print(m.a + m.b + m.c)
+
+-- deleting every key while iterating is safe
+local doomed: {[number]: string} = {}
+for i = 1, 100 do doomed[i * 7] = tostring(i) end
+local removed = 0
+for k in pairs(doomed) do
+    doomed[k] = nil
+    removed += 1
+end
+local left = 0
+for _ in pairs(doomed) do left += 1 end
+print("removed", removed, "left", left)

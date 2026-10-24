@@ -1,0 +1,5 @@
+local t=setmetatable({}, {
+    __unm=function(a,b,...) print("unm",a==b,type(b),select("#",...)) return 7 end,
+    __len=function(a,b,...) print("len",a==b,type(b),select("#",...)) return 8 end,
+})
+print(-t,#t)

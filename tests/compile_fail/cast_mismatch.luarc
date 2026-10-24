@@ -1,0 +1,2 @@
+local x = 1 :: string
+-- expect-error: 1:13: type mismatch: expected string, found number

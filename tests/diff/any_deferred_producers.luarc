@@ -1,0 +1,15 @@
+type Pair<T, U> = { left: T, right: U }
+type Payload = number | string
+local function identity<T>(value: T): T
+    return value
+end
+local pair: Pair<number, string> = { left = 11, right = "signal" }
+local payload: Payload = pair.right
+print(identity(pair.left * 3), identity(payload :: string))
+local missing: string? = nil
+local fallback: any = missing or "fallback"
+print(fallback :: string)
+local absent: any = nil or "literal fallback"
+print(absent :: string)
+local other = setmetatable({}, { __index = { value = 3 } })
+print(other.value)

@@ -1,0 +1,36 @@
+-- builtins are ordinary names that locals can shadow
+local function out(s: string)
+    print(s) -- the builtin print: `out` is defined before the shadowing local
+end
+local log = {}
+local function print(msg: string)
+    table.insert(log, "[log] " .. msg)
+end
+print("one")
+print("two")
+local type = "shadowed-type"
+local string = {upper = function(s: string): string return s .. "!" end}
+do
+    local print = 5
+    log[#log + 1] = tostring(print + 1)
+end
+local tostring = function(x: number): string return "n" .. x end
+log[#log + 1] = tostring(7)
+log[#log + 1] = string.upper("x")
+log[#log + 1] = type
+-- inner scopes and shadowing of locals
+local x = 1
+do
+    local x = x + 1
+    log[#log + 1] = "inner " .. x
+end
+log[#log + 1] = "outer " .. x
+local x = "redeclared"
+log[#log + 1] = x
+local function f(table: {number}): number
+    return #table -- parameter shadows the table library
+end
+log[#log + 1] = "param " .. f({1, 2})
+for _, line in ipairs(log) do
+    out(line)
+end

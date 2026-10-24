@@ -1,0 +1,3 @@
+local a = require("./cyc_a")
+return {}
+-- expect-error: cyc_a.luarc:1:11: cyclic module require: cyc_b.luarc -> cyc_a.luarc -> cyc_b.luarc

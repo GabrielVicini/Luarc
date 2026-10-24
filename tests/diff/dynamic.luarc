@@ -1,0 +1,143 @@
+-- The dynamic type `any`: flowing in, type tests, casts, operators and their
+-- run-time errors, unions, generic functions and aliases.
+
+type Pair<T, U> = { left: T, right: U }
+type Payload = number | string
+type Maybe = string | number | boolean
+
+local function identity<T>(value: T): T
+    return value
+end
+
+local function first<A, B>(pair: Pair<A, B>): A
+    return pair.left
+end
+
+local function describe(v: any): string
+    if type(v) == "number" then
+        return "number " .. tostring(v + 1)
+    elseif type(v) == "string" then
+        return "string " .. v .. "!"
+    elseif type(v) == "boolean" then
+        return "boolean " .. tostring(not v)
+    elseif v == nil then
+        return "nil"
+    end
+    return type(v)
+end
+
+print(describe(41), describe("hi"), describe(true), describe(nil))
+print(describe({}), describe(describe), describe({ 1, 2 }))
+
+-- aliases, unions, casts
+local pair: Pair<number, string> = { left = 11, right = "signal" }
+local payload: Payload = pair.right
+local cast = payload :: string
+print(identity(pair.left * 3), identity(cast), identity(true), first(pair))
+local back: Payload = 5
+print(back :: number, typeof(back), typeof(payload), typeof(nil), typeof({}), typeof(describe))
+local words: Pair<string, {number}> = { left = "ids", right = { 3, 4 } }
+print(first(words), #words.right)
+
+-- collections of any values
+local values: {any} = { 1, "x", true, false, 2.5 }
+local parts = {}
+for i, v in ipairs(values) do
+    parts[i] = describe(v)
+end
+print(table.concat(parts, ", "))
+print(#values, values[2], values[9])
+values[2] = 99
+values[#values + 1] = "tail"
+print(values[2], values[#values], describe(values[1]))
+local record: { name: string, data: any } = { name = "r", data = 5 }
+print(record.name, record.data, describe(record.data))
+record.data = "text"
+print(record.data, describe(record.data))
+record.data = nil
+print(record.data)
+local lookup: { [string]: any } = { ["a"] = 1, ["b"] = "two" }
+lookup.c = true
+print(lookup.a, lookup.b, lookup.c, lookup.d)
+
+-- tostring, equality and truthiness of any
+local a: any = 1
+local b: any = "1"
+local c: any = 1
+print(a == c, a == b, a ~= b, a == 1, "x" == b, b == "1", a == nil)
+print(tostring(a), tostring(b), tostring(c), a, b)
+print(string.format("%s|%s|%5s|%-3s|", a, b, a, b), string.format("%s", pair.right))
+local f: any = false
+local n: any = nil
+print(f and "yes" or "no", n and "yes" or "no", a and "yes" or "no")
+print(not f, not n, not a, not b)
+local z: any = 0
+local e: any = ""
+if z then print("zero is true") end
+if e then print("empty string is true") end
+if not n then print("nil is false") end
+print(a or "d", n or "d", f or "d", a and "r", n and "r")
+
+-- arithmetic, concatenation, comparison on any
+local one: any = 1
+local two: any = 2
+print(one + two, one - two, one * two, one / two, two // one, two % one, two ^ two)
+print(-one, one + 1, 1 + two, one < two, one <= two, one > two, one >= two)
+local s1: any = "a"
+local s2: any = "b"
+print(s1 .. s2, s1 .. "c", "d" .. s2, s1 < s2, s1 >= s2, one .. s1, s1 .. 2)
+local numstr: any = "10"
+print(numstr + 1, -numstr, numstr * "2")
+
+-- run-time errors of dynamic operators, with Luau's messages
+local tbl: any = {}
+local nothing: any = nil
+local yes: any = true
+local function try(fn: () -> ())
+    local ok, err = pcall(fn)
+    print(ok, err)
+end
+try(function() local x = one + tbl end)
+try(function() local x = nothing + 1 end)
+try(function() local x = yes * 2 end)
+try(function() local x = one - s1 end)
+try(function() local x = -tbl end)
+try(function() local x = tbl .. "x" end)
+try(function() local x = "x" .. nothing end)
+try(function() local x = one .. yes end)
+try(function() local x = one < s1 end)
+try(function() local x = tbl < tbl end)
+try(function() local x = nothing <= 1 end)
+try(function() local x = yes > one end)
+try(function() local x = s1 >= nothing end)
+
+-- casts back to the static type
+local box: any = 5
+print(box :: number, (box :: number) + 1)
+local arr: any = { 1, 2, 3 }
+print(#(arr :: {number}))
+local text: string? = "maybe"
+print((text :: string) .. "!", text :: string?)
+
+-- values keep their identity through any
+local shared = { 1, 2 }
+local x1: any = shared
+local x2: any = shared
+local x3: any = { 1, 2 }
+print(x1 == x2, x1 == x3, (x1 :: {number}) == shared)
+
+-- any in parameters, results and assignment
+local function pick(flag: boolean): any
+    if flag then
+        return 42
+    end
+    return "forty-two"
+end
+print(pick(true), pick(false), describe(pick(true)), describe(pick(false)))
+local slot: any = 1
+slot = "now a string"
+print(slot)
+slot = { 1 }
+print(type(slot))
+slot = nil
+print(slot)

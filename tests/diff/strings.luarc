@@ -1,0 +1,27 @@
+-- Strings as bytes: sub/byte/char/rep/upper/lower/find/match, escapes, long strings.
+local s = "Hello, World"
+print(#s, s:sub(1, 5), s:sub(-5), s:sub(-5, -2), s:sub(0), s:sub(8, 100), s:sub(5, 2) == "")
+print(s:upper(), s:lower(), string.rep("ab", 3), string.rep("x", 0))
+print(string.byte("A"), string.byte("abc", 2), string.char(72, 105))
+print(#"a\0b", "tab\there", "\65\066\x43\u{48}", "a\z
+      b", #"\xff\xfe")
+print([[long
+string]], [==[with ]] inside]==])
+print(string.find("hello world", "o w"))
+print(string.find("hello", "l"))
+local nf1, nf2 = string.find("hello", "xyz")
+print(nf1, nf2)
+print(string.find("hello", "l", 4))
+print(string.find("hello", "l", -2))
+print(string.find("a.b", ".", 1, true))
+print(string.find("hello", "()ll()"))
+print(string.find("x(a)y", "%b()"))
+print(string.find("THE (quick) fox", "%f[%a]%a+"))
+print(string.match("key = value", "(%w+)%s*=%s*(%w+)"))
+print(string.match("2026-10-22", "(%d+)-(%d+)-(%d+)"))
+print(string.match("hello", "^(h)(.-)(o)$"))
+print((string.match("  trim  ", "^%s*(.-)%s*$") or "?") .. "|")
+print(string.match("abc", "()b()"))
+print(string.format("%d|%.2f|%s|%%|%.0f", 42, 3.14159, "str", 2.5))
+print(("x"):rep(3), ("abc"):len(), ("ABC"):lower())
+print(`interp {1 + 1} {s:sub(1, 1)} {true}`)

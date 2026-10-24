@@ -1,0 +1,7 @@
+local C = {}
+C.self = C
+print("record", C.self == C)
+local array = {}
+local record = {children = array}
+table.insert(array, record)
+print("array-record", array[1] == record)

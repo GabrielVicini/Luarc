@@ -1,0 +1,14 @@
+--!optimize 0
+-- Literal aliases and actual retained next keys remain GC-stable at O0.
+local t = {["literal"] = 1}
+local literal = "literal"
+local alias = literal
+t[literal] = nil
+print(next(t, "literal") == nil, next(t, alias) == nil)
+local dynamic = string.rep("x", 40) .. "tail"
+local map = {[dynamic] = 7}
+local key, value = next(map)
+if key ~= nil then
+    map[key] = nil
+    print(value, next(map, key) == nil)
+end

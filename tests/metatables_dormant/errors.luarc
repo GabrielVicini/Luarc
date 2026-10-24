@@ -1,0 +1,16 @@
+local Class = {}
+Class.__index = Class
+function Class.new() return setmetatable({}, Class) end
+function Class.fail() error("inherited failure") end
+local obj = Class.new()
+local function arg() print("argument") return 3 end
+local ok, err = pcall(function() local x = obj:missing(arg()) return x end)
+print("missing", ok, err)
+local ok2, err2 = pcall(function() return obj:fail() end)
+print("failure", ok2, err2)
+local ok3, err3 = pcall(function() local x = obj.missing(obj, arg()) return x end)
+print("dot-missing", ok3, err3)
+Class.other = {f = function(self, value) return value end}
+Class.other = nil
+local ok4, err4 = pcall(function() return obj.other:f(arg()) end)
+print("nil-receiver", ok4, err4)

@@ -1,0 +1,4 @@
+local t = table.pack(1, nil, 3)
+local ending: number? = nil
+print(table.unpack(t, 1, ending))
+-- expect-error: 3:13: table.unpack on a nil-preserving array requires an explicit non-nil end index

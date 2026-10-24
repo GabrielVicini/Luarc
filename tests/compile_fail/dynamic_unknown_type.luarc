@@ -1,0 +1,2 @@
+local x: unknown = 1
+-- expect-error: 1:10: 'unknown' is not supported: values need one static type (use 'any' for a dynamic value)

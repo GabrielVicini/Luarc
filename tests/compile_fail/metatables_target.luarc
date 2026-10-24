@@ -1,0 +1,4 @@
+local C = {}
+C.__index = C
+setmetatable(1, C)
+-- expect-error: 3:1: setmetatable requires a statically known record as its first argument

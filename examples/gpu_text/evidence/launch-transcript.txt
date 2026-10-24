@@ -1,0 +1,6 @@
+# luarc build main.luau && ./main.exe  (2026-10-22, Windows 11, AMD Radeon 880M, stable rustc 1.99.1)
+# window closed without key presses (CloseRequested path); visual check of the rendered text still pending
+gpu ready:	AMD Radeon(TM) 880M Graphics
+exiting after 81 frame(s), 0 key(s)
+event loop finished
+exit=0

@@ -1,0 +1,3 @@
+local fx = require("rust:fixture")
+print(fx.greet(42))
+-- expect-error: 2:16: type mismatch: expected string, found number

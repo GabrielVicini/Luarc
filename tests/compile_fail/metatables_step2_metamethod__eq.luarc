@@ -1,0 +1,2 @@
+local child = setmetatable({}, {__index = {}, __eq = 1})
+-- expect-error: 1:28: metamethod '__eq' is not supported in this step

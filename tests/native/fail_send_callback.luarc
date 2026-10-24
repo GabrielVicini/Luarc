@@ -1,0 +1,3 @@
+local fx = require("rust:fixture")
+fx.spawn_like(function() end)
+-- expect-error: 2:4: callback parameter F must be Send: native code may call it from another thread

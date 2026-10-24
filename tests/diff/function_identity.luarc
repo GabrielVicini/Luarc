@@ -1,0 +1,15 @@
+-- Function display follows callable identity across aliases and dynamic boxing.
+local function make(value: number)
+    return function(): number return value end
+end
+local f = make(1)
+local g = make(2)
+local a: any = f
+local b: any = f
+local other: any = g
+assert(a == b)
+assert(tostring(a) == tostring(b))
+assert(tostring(a) == tostring(f))
+assert(a ~= other)
+assert(tostring(a) ~= tostring(other))
+print("function identity", a == b, tostring(a) == tostring(b), tostring(a) == tostring(f), a ~= other, tostring(a) ~= tostring(other))

@@ -1,0 +1,2 @@
+-- expect-error: 2:7: xpcall expects at least two arguments
+print(xpcall(function()end))

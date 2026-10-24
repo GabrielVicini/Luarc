@@ -1,0 +1,51 @@
+-- Memory/cycle regression (see docs/runtime-foundation.md): acyclic objects are
+-- reclaimed when the last reference goes away; unreachable cycles (tables that
+-- contain themselves, closures stored in the tables they capture, cycles through
+-- native handles) are reclaimed by the collector.
+local fx = require("rust:fixture")
+
+collectgarbage("collect")
+local base = collectgarbage("count")
+
+do
+    local acyclic = {res = fx.Tracked.new("acyclic")}
+    local alias = acyclic
+end
+print("after acyclic scope", fx.live_tracked())
+
+do
+    local holder = {res = fx.Tracked.new("cyclic"), me = nil}
+    holder.me = holder -- self-reference: a cycle
+end
+-- a closure stored in the table it captures is also a cycle
+do
+    local obj = {res = fx.Tracked.new("closure-cycle"), cb = nil}
+    obj.cb = function() return obj.res:name() end
+end
+collectgarbage("collect")
+print("after cycles and a collection", fx.live_tracked())
+
+-- recursion through a local function does not create a cycle
+do
+    local res = fx.Tracked.new("recursive")
+    local function count(n: number): number
+        if n == 0 then return #res:name() end
+        return count(n - 1)
+    end
+    print("recursive result", count(3))
+end
+print("after recursive local function", fx.live_tracked())
+
+-- repeated creation and discard of cyclic structures returns to baseline
+for i = 1, 2000 do
+    local a = {name = "a", peer = nil, res = fx.Tracked.new("a")}
+    local b = {name = "b", peer = a, res = fx.Tracked.new("b")}
+    a.peer = b
+    local ping
+    local pong
+    ping = function(n: number): number if n == 0 then return 0 end return pong(n - 1) end
+    pong = function(n: number): number if n == 0 then return 1 end return ping(n - 1) end
+    local _ = ping(i % 7)
+end
+collectgarbage("collect")
+print("after churn", fx.live_tracked(), collectgarbage("count") == base)

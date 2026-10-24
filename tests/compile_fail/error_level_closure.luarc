@@ -1,0 +1,5 @@
+local function check(c)
+  return function() error("x", 2) end
+end
+check(1)
+-- expect-error: 2:32: error level 2 reports the line of the caller, which is only known inside a local function that is only called by name; use level 1, or call this function directly

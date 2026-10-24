@@ -1,0 +1,9 @@
+pending after spawn	2
+concrete 10, delay 30, port 8080
+false	false
+polls bounded	true
+false	futures.luarc:26: parse_later: invalid port number 'not a number'
+false	futures.luarc:33: this future was already awaited (a future can be awaited once)
+held	1	true
+cancelled	true	0	false
+cancel again	false

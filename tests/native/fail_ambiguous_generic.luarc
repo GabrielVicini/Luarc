@@ -1,0 +1,4 @@
+local fx = require("rust:fixture")
+local n = fx.parse_num("12")
+print(n)
+-- expect-error: 2:14: ambiguous native generic argument 'T' in call to 'parse_num'

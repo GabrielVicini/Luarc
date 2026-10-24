@@ -1,0 +1,6 @@
+2	2	1
+2	2
+1
+false	clone.luarc:21: Notes object was consumed by 'seal' and can no longer be used
+false	clone.luarc:22: Notes object was consumed by 'seal' and can no longer be used
+2

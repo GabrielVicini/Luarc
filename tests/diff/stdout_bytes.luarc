@@ -1,0 +1,9 @@
+-- Raw stdout regression: newline translation must preserve every other byte.
+print()
+print("a", "b", 7, true, nil)
+print("L\nF")
+print("CR\rLF\nCRLF\r\nEND")
+print("nul\0after")
+print("\x80\xff", string.char(1, 9, 10, 13, 26, 127, 128, 255))
+local function values(...: string) return ... end
+print(values("pack\n", "\0\xff"))

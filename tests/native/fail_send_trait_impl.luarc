@@ -1,0 +1,6 @@
+-- A table cannot implement a trait that must also be Send.
+local fx = require("rust:fixture")
+local g = {}
+function g:hello() return "hi" end
+print(fx.greet_send(g))
+-- expect-error: 5:10: a source table cannot implement 'Greeter' here: the parameter also requires Send/Sync

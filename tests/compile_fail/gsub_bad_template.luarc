@@ -1,0 +1,2 @@
+print(string.gsub("abc", "(b)", "%2"))
+-- expect-error: 1:33: invalid capture index %2 in the replacement string (the pattern has 1 capture(s))

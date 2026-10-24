@@ -1,0 +1,3 @@
+local a: any = "s"
+print(#a)
+-- expect-error: 2:8: attempt to get length of an 'any' value

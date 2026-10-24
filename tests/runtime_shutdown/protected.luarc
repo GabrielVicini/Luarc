@@ -1,0 +1,5 @@
+local function f() error("sentinel", 0) end
+local alias = f
+local t = setmetatable({}, { __call = f })
+local ok, err = pcall(function() t() end)
+print(ok, err)

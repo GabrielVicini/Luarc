@@ -1,0 +1,87 @@
+-- Functions returning `...`: a run-time number of results.
+local function pass(...: number)
+  return ...
+end
+print(pass())
+print(pass(1, 2, 3))
+local function passo(...: number?)
+  return ...
+end
+print(select("#", passo(1, nil, 3)), select(2, passo(1, nil, 3)))
+
+-- fixed results before the pack
+local function head(x: number, ...: number)
+  return x * 2, ...
+end
+print(head(1))
+print(head(1, 2, 3))
+print(select(-1, head(1, 2, 3)), select("#", head(1)))
+
+-- adjusted to a fixed count, one value, in the middle of a list
+local a, b, c = pass(7, 8)
+print(a, b, c)
+local x = pass(9, 10)
+print(x, pass(4, 5), pass(6))
+
+-- forwarding chains and table constructors
+local function fwd(...: number)
+  return pass(...)
+end
+local function tail2(...: number)
+  return select(2, ...)
+end
+print(fwd(1, 2), tail2(1, 2, 3), tail2(1))
+local t = {head(5, 6, 7)}
+print(#t, t[1], t[3])
+local u = {0, fwd(1, 2)}
+print(#u)
+
+-- calling another function with a pack-returning call as the last argument
+local function count(...: number): number
+  return select("#", ...)
+end
+local function add(p: number?, q: number?): number
+  return (p or 0) + (q or 0)
+end
+print(count(pass(1, 2, 3)), count(head(1, 2)), add(pass(3, 4)), add(pass()))
+-- a call before a trailing pack gives one value
+print(count(head(1, 2), pass(5, 6)), head(1, 9), pass(8))
+
+-- annotated result type with a tail
+local function stats(...: number): (number, ...number)
+  local s = 0
+  for _, v in ipairs({...}) do s += v end
+  return s, ...
+end
+print(stats(1, 2, 3))
+local s1, s2 = stats(10)
+print(s1, s2)
+
+-- mixed returns: the smallest fixed count, the rest at run time
+local function mixed(n: number, ...: number)
+  if n > 0 then
+    return n, n + 1
+  end
+  return ...
+end
+print(mixed(1))
+print(mixed(0, 5, 6, 7))
+print(mixed(0))
+
+-- recursion: drop the first value until one is left
+local function last(...: number): ...number
+  if select("#", ...) <= 1 then
+    return ...
+  end
+  return last(select(2, ...))
+end
+print(last(1, 2, 3, 4))
+
+-- a closure and a method returning packs
+local obj = { n = 1 }
+function obj:rest(...: string)
+  return self.n, ...
+end
+print(obj:rest("a", "b"))
+local r = function(...: string) return "first", ... end
+print(r("x", "y"))

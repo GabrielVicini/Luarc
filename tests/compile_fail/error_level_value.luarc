@@ -1,0 +1,4 @@
+local function check(c) if not c then error("x", 2) end end
+local f = check
+f(false)
+-- expect-error: 1:50: error level 2 reports the line of the caller, which is only known inside a local function that is only called by name; use level 1, or call this function directly

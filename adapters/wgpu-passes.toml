@@ -1,0 +1,21 @@
+# `CommandEncoder::begin_render_pass(&mut self, ..) -> RenderPass<'encoder>`
+# borrows the encoder for the pass's lifetime. wgpu documents
+# `RenderPass::forget_lifetime`: the pass becomes `'static` and wgpu itself locks
+# the encoder until the pass ends. luarc applies it here and mirrors the lock on
+# the source side: while the pass handle is alive (until it is closed — e.g. a
+# `local pass <close> = ...` going out of scope — or dropped), any use of the
+# encoder raises "locked by an open RenderPass" instead of a wgpu validation error.
+# The same protocol applies to compute passes.
+adapter = "wgpu-passes"
+adapter_version = 1
+crate = "wgpu"
+
+[[scoped_borrow]]
+type = "CommandEncoder"
+method = "begin_render_pass"
+forget = "forget_lifetime"
+
+[[scoped_borrow]]
+type = "CommandEncoder"
+method = "begin_compute_pass"
+forget = "forget_lifetime"

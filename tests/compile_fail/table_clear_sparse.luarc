@@ -1,0 +1,4 @@
+local t=table.pack(1,nil,3)
+table.clear(t)
+-- expect-error: 2:7: table.clear on a nil-preserving array is unsupported
+

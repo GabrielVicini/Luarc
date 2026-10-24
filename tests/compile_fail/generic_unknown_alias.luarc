@@ -1,0 +1,2 @@
+local x: Foo<number> = 1
+-- expect-error: 1:10: unknown generic type 'Foo'
