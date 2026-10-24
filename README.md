@@ -21,7 +21,8 @@ A statically checked, Luau-derived programming language that compiles to Rust an
 
 Luarc lets you write familiar Luau-style code and compile it ahead of time to a native executable. It supports static type inference, shared tables, closures, modules, multiple returns, coroutines, and parts of Luau's metatable system.
 
-[Check out the wgpu pixel performance demo](https://www.youtube.com/watch?v=02XkP4el8mU)
+[Check out the wgpu pixel performance demo](https://www.youtube.com/watch?v=02XkP4el8mU) </p>
+You can find the code in examples/playground [here](https://github.com/GabrielVicini/Luarc/blob/master/examples/playground/main.luarc)
 
 The other half of Luarc is Rust interoperability. Supported Rust crates can be imported directly from source code, without handwritten bindings or Rust glue:
 
