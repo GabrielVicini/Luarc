@@ -7,8 +7,5 @@ target/
 bench/out/
 fixtures/fixture_crate/Cargo.lock
 
-# Local agent checkouts (may contain uncommitted work; inspect before deleting).
-/.claude/worktrees/
-
 # Generated code graph and analysis cache.
 /graphify-out/
